@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1020" />
+    <title>ModelMatch Pro</title>
+    <link rel="stylesheet" href="style.css?v=2" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand-mark">M</div>
+          <div>
+            <div class="brand-name">ModelMatch Pro</div>
+            <div class="brand-tag">Laptop model checker</div>
+          </div>
+        </div>
+
+        <div class="tab-switcher" aria-label="App modes">
+          <button class="nav-btn active" id="manualTabBtn" type="button">Manual Search</button>
+          <button class="nav-btn" id="aiTabBtn" type="button">AI Assistant</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section id="manualPanel" class="panel active">
+          <div class="hero-card">
+            <span class="eyebrow">Smart availability scan</span>
+            <h1>Check if a laptop model is in your PDF catalog</h1>
+            <p>Upload a product PDF, search by model, or scan a laptop screenshot for instant matching.</p>
+          </div>
+
+          <div class="card">
+            <h2><span class="icon">📄</span> 1. Upload PDF</h2>
+            <input type="file" id="pdfInput" class="file-input" accept=".pdf" />
+            <label class="file-label" id="pdfLabel" for="pdfInput">
+              <div class="file-icon">📂</div>
+              <div>Tap to select PDF</div>
+              <div class="file-name" id="pdfFileName">No file selected</div>
+            </label>
+            <div id="pdfStatus" class="status-bar"></div>
+          </div>
+
+          <div class="card">
+            <h2><span class="icon">🔎</span> 2. Search model</h2>
+            <div class="search-box">
+              <input type="text" id="searchInput" placeholder="Try: A315-58 or 840 G3" />
+              <button class="btn btn-primary" id="searchBtn" disabled>Check</button>
+            </div>
+            <div id="searchResult" class="result" style="display:none;"></div>
+          </div>
+
+          <div class="card">
+            <h2><span class="icon">📷</span> 3. Screenshot OCR</h2>
+            <p class="helper-text">
+              Upload a screenshot of the laptop sticker or bezel, and the app will read the model text and compare it with your PDF list.
+            </p>
+            <input type="file" id="imgInput" class="file-input" accept="image/*" />
+            <label class="file-label" id="imgLabel" for="imgInput">
+              <div class="file-icon">🖼️</div>
+              <div>Tap to select screenshot</div>
+              <div class="file-name" id="imgFileName">No file selected</div>
+            </label>
+            <div id="ocrProgress" class="ocr-progress">
+              <div id="ocrStatus">Initializing OCR engine...</div>
+              <div class="progress-bar"><div class="progress-bar-fill" id="ocrBar"></div></div>
+            </div>
+            <div id="ocrResult" class="result" style="display:none;"></div>
+          </div>
+        </section>
+
+        <section id="aiPanel" class="panel">
+          <div class="hero-card ai-hero">
+            <span class="eyebrow">AI-powered lookup</span>
+            <h2>Ask the assistant about model availability</h2>
+            <p>Use your Google API key to cross-check a product model with the PDF list using an AI assistant.</p>
+          </div>
+
+          <div class="card ai-card">
+            <label class="input-label" for="aiPromptInput">Describe the model or ask a question</label>
+            <textarea id="aiPromptInput" rows="5" placeholder="Example: Is HP EliteBook 840 G3 available in the PDF? Or check if A315-58 is in the list."></textarea>
+            <div class="ai-actions">
+              <button class="btn btn-primary" id="aiSearchBtn" type="button">Ask AI</button>
+            </div>
+            <div id="aiStatus" class="ai-status">Ready</div>
+            <div id="aiResult" class="result ai-result" style="display:none;"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="config.js?v=1"></script>
+    <script src="app.js?v=5"></script>
+  </body>
+</html>
