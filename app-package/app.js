@@ -44,10 +44,22 @@ class ModelChecker {
 
     this.pdfInput.addEventListener('change', () => this.handlePDFUpload());
     this.searchBtn.addEventListener('click', () => this.handleSearch());
-    this.aiImageInput.addEventListener('change', () => {
+    this.aiImageInput.addEventListener('change', async () => {
       const file = this.aiImageInput.files[0];
       this.aiImageFileName.textContent = file ? file.name : 'No image selected';
-      if (file) this.aiPromptInput.value = '';
+      if (!file) {
+        this.aiSearchBtn.disabled = true;
+        this.aiStatus.textContent = 'Ready';
+        return;
+      }
+
+      this.aiPromptInput.value = '';
+      this.aiSearchBtn.disabled = !this.pdfLoaded;
+      this.aiStatus.textContent = this.pdfLoaded
+        ? 'Image ready. Starting AI scan...'
+        : 'Upload your PDF catalog first.';
+
+      if (this.pdfLoaded) await this.handleAiImageSearch(file);
     });
     this.searchInput.addEventListener('input', () => {
       this.searchBtn.disabled = !this.pdfLoaded || !this.searchInput.value.trim();
