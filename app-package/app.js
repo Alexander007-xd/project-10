@@ -19,6 +19,7 @@ class ModelChecker {
   constructor() {
     this.pdfText = '';
     this.models = new Set();
+    this.modelLabels = new Map();
     this.pdfLoaded = false;
 
     this.pdfInput = document.getElementById('pdfInput');
@@ -62,6 +63,7 @@ class ModelChecker {
     this.aiPromptInput.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') this.handleAiSearch();
     });
+    this.aiSearchBtn.disabled = true;
   }
 
   showTab(tab) {
@@ -125,6 +127,7 @@ class ModelChecker {
 
   extractModels(text) {
     this.models.clear();
+    this.modelLabels.clear();
 
     const textVariants = [text, text.replace(/\s+/g, ' ')];
     const patterns = [
@@ -143,18 +146,36 @@ class ModelChecker {
 
         candidates.forEach((item) => {
           const model = this.normalizeModel(item);
-          if (this.isLikelyModel(model)) this.models.add(model);
+          if (this.isLikelyModel(model)) this.addModel(model, line);
         });
 
         patterns.forEach((pattern) => {
           const matches = line.match(pattern) || [];
           matches.forEach((match) => {
             const model = this.normalizeModel(match);
-            if (this.isLikelyModel(model)) this.models.add(model);
+            if (this.isLikelyModel(model)) this.addModel(model, line);
           });
         });
       });
     });
+  }
+
+  addModel(model, sourceLine) {
+    this.models.add(model);
+    const label = String(sourceLine || '').replace(/\s+/g, ' ').trim();
+    if (label && !this.modelLabels.has(model)) {
+      this.modelLabels.set(model, label.length > 140 ? `${label.slice(0, 137)}...` : label);
+    }
+  }
+
+  displayModel(model) {
+    return this.modelLabels.get(model) || model;
+  }
+
+  findLocalMatches(query) {
+    return Array.from(this.models)
+      .filter(model => this.isModelMatch(query, model))
+      .map(model => this.displayModel(model));
   }
 
   async handlePDFUpload() {
@@ -186,6 +207,8 @@ class ModelChecker {
       this.pdfStatus.textContent = `✅ Loaded ${this.models.size} models`;
       this.pdfStatus.style.color = '#2dd4bf';
       this.searchBtn.disabled = false;
+      this.aiSearchBtn.disabled = false;
+      this.aiStatus.textContent = 'Catalog ready';
       this.searchInput.focus();
     } catch (error) {
       console.error('PDF error:', error);
@@ -236,6 +259,13 @@ class ModelChecker {
 
   async handleAiSearch() {
     const prompt = this.aiPromptInput.value.trim();
+    if (!this.pdfLoaded) {
+      this.aiStatus.textContent = 'Upload your PDF catalog first.';
+      this.aiResult.style.display = 'block';
+      this.aiResult.className = 'result not-found';
+      this.aiResult.innerHTML = '<div>Upload a PDF before asking about availability.</div>';
+      return;
+    }
     if (!prompt) {
       this.aiStatus.textContent = 'Please enter a model name or question.';
       this.aiResult.style.display = 'block';
@@ -255,7 +285,7 @@ class ModelChecker {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
-          availableModels: Array.from(this.models)
+          availableModels: Array.from(this.models).map(model => this.displayModel(model))
         })
       });
 
@@ -270,7 +300,7 @@ class ModelChecker {
       const statusText = data.available ? '✅ Available' : '❌ Not Found';
       const statusClass = data.available ? 'result available' : 'result not-found';
       const options = matchedModels.length
-        ? `<div class="match-info"><strong>Available options:</strong><br>${matchedModels.map(model => this.escapeHtml(model)).join('<br>')}</div>`
+        ? `<div class="catalog-options"><div class="options-title">PDF catalog matches</div>${matchedModels.map((model, index) => `<div class="catalog-option"><span class="option-number">${index + 1}</span><span>${this.escapeHtml(model)}</span></div>`).join('')}</div>`
         : '';
       const serviceNotice = data.aiUnavailable
         ? '<div class="match-info">Gemini is temporarily busy. This result was checked directly against your PDF.</div>'
@@ -287,6 +317,17 @@ class ModelChecker {
       this.aiStatus.textContent = 'AI response ready';
     } catch (error) {
       console.error('AI lookup error:', error);
+      const localMatches = this.findLocalMatches(prompt);
+      if (localMatches.length) {
+        this.aiResult.className = 'result available';
+        this.aiResult.innerHTML = `
+          <div>✅ Available in your PDF</div>
+          <div class="catalog-options"><div class="options-title">PDF catalog matches</div>${localMatches.map((model, index) => `<div class="catalog-option"><span class="option-number">${index + 1}</span><span>${this.escapeHtml(model)}</span></div>`).join('')}</div>
+          <div class="match-info">AI explanation is temporarily unavailable, but the catalog match is confirmed locally.</div>
+        `;
+        this.aiStatus.textContent = 'Catalog result ready';
+        return;
+      }
       this.aiResult.className = 'result not-found';
       this.aiResult.innerHTML = `
         <div>❌ AI lookup failed</div>

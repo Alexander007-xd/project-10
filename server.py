@@ -79,11 +79,6 @@ def find_model_matches(query: str, available_models: List[str]) -> List[str]:
 @app.route("/api/ai-check", methods=["POST"])
 def ai_check():
     api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
-        return jsonify({
-            "error": "Missing GOOGLE_API_KEY. Set it in your terminal before starting the server: set GOOGLE_API_KEY=your_key_here"
-        }), 500
-
     payload = request.get_json(silent=True) or {}
     prompt = (payload.get("prompt") or "").strip()
     available_models = payload.get("availableModels") or []
@@ -92,6 +87,17 @@ def ai_check():
         return jsonify({"error": "Prompt is required."}), 400
 
     matches = find_model_matches(prompt, available_models)
+    if not api_key:
+        return jsonify({
+            "available": bool(matches),
+            "matchedModel": matches[0] if matches else None,
+            "matchedModels": matches,
+            "ambiguous": len(matches) > 1,
+            "reasoning": "Catalog result checked directly from the uploaded PDF. Set GOOGLE_API_KEY to enable Gemini explanations.",
+            "confidence": 98 if matches else 72,
+            "aiUnavailable": True,
+        })
+
     model_list = ", ".join(available_models) if available_models else "No models provided."
     matched_list = ", ".join(matches) if matches else "No deterministic matches."
     user_input = (
