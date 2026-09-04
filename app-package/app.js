@@ -162,9 +162,8 @@ class ModelChecker {
 
   addModel(model, sourceLine) {
     this.models.add(model);
-    const label = String(sourceLine || '').replace(/\s+/g, ' ').trim();
-    if (label && !this.modelLabels.has(model)) {
-      this.modelLabels.set(model, label.length > 140 ? `${label.slice(0, 137)}...` : label);
+    if (!this.modelLabels.has(model)) {
+      this.modelLabels.set(model, model);
     }
   }
 
