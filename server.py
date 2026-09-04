@@ -103,69 +103,330 @@ def health():
     return jsonify({"ok": True, "textModel": GEMINI_MODEL, "imageModel": GEMINI_IMAGE_MODEL})
 
 
+SERIES_PATTERNS = [
+    ("MacBook Air", re.compile(r"\b(?:MACBOOK\s*AIR|MBA)\b", re.I)),
+    ("MacBook Pro", re.compile(r"\b(?:MACBOOK\s*PRO|MBP)\b", re.I)),
+    ("MacBook", re.compile(r"\bMACBOOK\b", re.I)),
+    ("Surface Laptop", re.compile(r"\bSURFACE\s*LAPTOP\b", re.I)),
+    ("Surface Pro", re.compile(r"\bSURFACE\s*PRO\b", re.I)),
+    ("Surface Book", re.compile(r"\bSURFACE\s*BOOK\b", re.I)),
+    ("Surface", re.compile(r"\bSURFACE\b", re.I)),
+    ("ThinkPad X1 Carbon", re.compile(r"\b(?:THINKPAD\s*)?X1\s*CARBON\b", re.I)),
+    ("ThinkPad X1 Yoga", re.compile(r"\b(?:THINKPAD\s*)?X1\s*YOGA\b", re.I)),
+    ("ThinkPad", re.compile(r"\bTHINKPAD\b", re.I)),
+    ("IdeaPad Flex", re.compile(r"\bIDEAPAD\s*FLEX\b", re.I)),
+    ("IdeaPad Gaming", re.compile(r"\bIDEAPAD\s*GAMING\b", re.I)),
+    ("IdeaPad Slim", re.compile(r"\bIDEAPAD\s*SLIM\b", re.I)),
+    ("IdeaPad", re.compile(r"\bIDEAPAD\b", re.I)),
+    ("Legion", re.compile(r"\bLEGION\b", re.I)),
+    ("LOQ", re.compile(r"\bLOQ\b", re.I)),
+    ("Yoga", re.compile(r"\bYOGA\b", re.I)),
+    ("EliteBook Folio", re.compile(r"\bELITEBOOK\s*FOLIO\b", re.I)),
+    ("EliteBook x360", re.compile(r"\bELITEBOOK\s*X360\b", re.I)),
+    ("EliteBook", re.compile(r"\bELITEBOOK\b", re.I)),
+    ("ProBook x360", re.compile(r"\bPROBOOK\s*X360\b", re.I)),
+    ("ProBook", re.compile(r"\bPROBOOK\b", re.I)),
+    ("Pavilion Aero", re.compile(r"\bPAVILION\s*AERO\b", re.I)),
+    ("Pavilion x360", re.compile(r"\bPAVILION\s*X360\b", re.I)),
+    ("Pavilion", re.compile(r"\bPAVILION\b", re.I)),
+    ("Envy x360", re.compile(r"\bENVY\s*X360\b", re.I)),
+    ("Envy", re.compile(r"\bENVY\b", re.I)),
+    ("Spectre x360", re.compile(r"\bSPECTRE\s*X360\b", re.I)),
+    ("Spectre", re.compile(r"\bSPECTRE\b", re.I)),
+    ("Victus", re.compile(r"\bVICTUS\b", re.I)),
+    ("Omen", re.compile(r"\bOMEN\b", re.I)),
+    ("Inspiron", re.compile(r"\bINSPIRON\b", re.I)),
+    ("Latitude", re.compile(r"\bLATITUDE\b", re.I)),
+    ("Vostro", re.compile(r"\bVOSTRO\b", re.I)),
+    ("XPS", re.compile(r"\bXPS\b", re.I)),
+    ("Precision", re.compile(r"\bPRECISION\b", re.I)),
+    ("VivoBook S", re.compile(r"\bVIVOBOOK\s*S\b", re.I)),
+    ("VivoBook Pro", re.compile(r"\bVIVOBOOK\s*PRO\b", re.I)),
+    ("VivoBook Go", re.compile(r"\bVIVOBOOK\s*GO\b", re.I)),
+    ("VivoBook", re.compile(r"\bVIVOBOOK\b", re.I)),
+    ("ZenBook", re.compile(r"\bZENBOOK\b", re.I)),
+    ("TUF Gaming", re.compile(r"\bTUF\s*GAMING\b", re.I)),
+    ("TUF Dash", re.compile(r"\bTUF\s*DASH\b", re.I)),
+    ("TUF", re.compile(r"\bTUF\b", re.I)),
+    ("ROG Zephyrus", re.compile(r"\bROG\s*ZEPHYRUS\b", re.I)),
+    ("ROG Strix", re.compile(r"\bROG\s*STRIX\b", re.I)),
+    ("ROG", re.compile(r"\bROG\b", re.I)),
+    ("ExpertBook", re.compile(r"\bEXPERTBOOK\b", re.I)),
+    ("Aspire 1", re.compile(r"\bASPIRE\s*1\b", re.I)),
+    ("Aspire 3", re.compile(r"\bASPIRE\s*3\b", re.I)),
+    ("Aspire 5", re.compile(r"\bASPIRE\s*5\b", re.I)),
+    ("Aspire 7", re.compile(r"\bASPIRE\s*7\b", re.I)),
+    ("Aspire", re.compile(r"\bASPIRE\b", re.I)),
+    ("Nitro 5", re.compile(r"\bNITRO\s*5\b", re.I)),
+    ("Nitro", re.compile(r"\bNITRO\b", re.I)),
+    ("Predator Helios Neo", re.compile(r"\bPREDATOR\s*HELIOS\s*NEO\b", re.I)),
+    ("Predator Helios", re.compile(r"\bPREDATOR\s*HELIOS\b", re.I)),
+    ("Predator", re.compile(r"\bPREDATOR\b", re.I)),
+    ("Swift", re.compile(r"\bSWIFT\b", re.I)),
+    ("Modern", re.compile(r"\bMODERN\b", re.I)),
+    ("Blade", re.compile(r"\bBLADE\b", re.I)),
+    ("Viper", re.compile(r"\bVIPER\b", re.I)),
+]
+
+BRANDS = {"ACER", "ASUS", "DELL", "APPLE", "HP", "LENOVO", "MICROSOFT", "MSI", "RAZER", "CANON", "SAMSUNG"}
+
+
+def normalize(text: str) -> str:
+    return re.sub(r"\s+", " ", str(text or "").upper().strip())
+
+
+def compact(text: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", normalize(text))
+
+
 def normalize_model(text: str) -> str:
-    return re.sub(r"[^A-Za-z0-9]+", " ", str(text or "")).upper().strip()
+    return compact(text)
 
 
 def compact_model(text: str) -> str:
-    return re.sub(r"[^A-Z0-9]", "", normalize_model(text))
+    return compact(text)
 
 
-def model_code(text: str) -> str:
-    compact = compact_model(text)
-    numeric_candidates = re.findall(r"\d{2,6}[A-Z]{1,4}\d{1,4}[A-Z]?|\d{3,6}[A-Z]\d{1,3}[A-Z]?|\d{3,6}[A-Z]{1,3}", compact)
-    if numeric_candidates:
-        return max(numeric_candidates, key=len)
-    letter_candidates = re.findall(r"[A-Z]{1,6}\d{2,6}[A-Z]{0,3}", compact)
-    if letter_candidates:
-        return max(letter_candidates, key=len)
-    # 4-5 digit standalone model numbers (e.g. Dell 3511, 5420, 9305)
-    four_digit = re.findall(r"\b\d{4,5}\b", str(text or ""))
-    valid_four_digit = [d for d in four_digit if not (len(d) == 4 and (d.startswith("19") or d.startswith("20")))]
-    if valid_four_digit:
-        return valid_four_digit[0]
-    return compact
+def extract_keys(text: str) -> dict:
+    norm = normalize(text)
+    comp = compact(norm)
+
+    series = ""
+    for name, pattern in SERIES_PATTERNS:
+        if pattern.search(norm):
+            series = name
+            break
+
+    clean = norm
+    for b in BRANDS:
+        clean = re.sub(rf"\b{b}\b", "", clean, flags=re.I)
+    if series:
+        clean = re.sub(re.escape(series), "", clean, flags=re.I)
+    clean = re.sub(r"\b(?:LAPTOP|NOTEBOOK|SERIES|INCH|DEVICES?)\b", "", clean, flags=re.I).strip()
+    is_series_only = bool(series and len(compact(clean)) == 0)
+
+    gen = ""
+    hp_gen = re.search(r"\b(?:G|GEN)\s*(\d{1,2})\b", norm, re.I)
+    if hp_gen:
+        gen = f"G{hp_gen.group(1)}"
+    apple_m = re.search(r"\b(M[1-4](?:\s*(?:PRO|MAX|ULTRA))?)\b", norm, re.I)
+    if apple_m:
+        gen = re.sub(r"\s+", "", apple_m.group(1))
+    gen_match = re.search(r"\bGEN\s*(\d{1,2})\b", norm, re.I)
+    if gen_match and not gen:
+        gen = f"GEN{gen_match.group(1)}"
+
+    codes = set()
+    base_code = ""
+    suffix = ""
+
+    for m in re.findall(r"\bA\d{4}\b", norm, re.I):
+        codes.add(compact(m))
+
+    for m in re.findall(r"\bP\d{2,3}[A-Z]\b", norm, re.I):
+        codes.add(compact(m))
+
+    for m in re.findall(r"\bMODEL\s*(\d{4})\b", norm, re.I):
+        num = re.sub(r"\D", "", m)
+        if num:
+            codes.add(num)
+
+    clean_norm = re.sub(r"\b\d{1,2}(?:\.\d)?\s*-\s*(?:INCH|IN)\b", "", norm, flags=re.I)
+    clean_norm = re.sub(r'\b\d{1,2}(?:\.\d)?\s*(?:INCH|IN|")\b', "", clean_norm, flags=re.I)
+
+    for hm in re.findall(r"\b([A-Z]{0,4}\d{1,4}[A-Z]{0,2})\s*-\s*([A-Z0-9]{1,8})\b", clean_norm, re.I):
+        p0, p1 = compact(hm[0]), compact(hm[1])
+        if len(p0) >= 2:
+            codes.add(p0)
+        if len(p1) >= 2:
+            codes.add(p1)
+        full = p0 + p1
+        if len(full) >= 3:
+            codes.add(full)
+        if not base_code and len(p0) >= 2:
+            base_code = p0
+            suffix = p1
+
+    for gm in re.findall(r"\b([A-Z]{1,4}\d{2,5}[A-Z]{0,4}|\d{2,4}[A-Z]{1,4}\d{0,4}|\d{4,5})\b", clean_norm, re.I):
+        c = compact(gm)
+        if not re.match(r"^(19|20)\d{2}$", c) and len(c) >= 3:
+            codes.add(c)
+            alpha_split = re.match(r"^([A-Z]{1,4}\d{2,4})([A-Z]{1,4})$", c, re.I)
+            if alpha_split:
+                codes.add(alpha_split.group(1).upper())
+                if not base_code:
+                    base_code = alpha_split.group(1).upper()
+                    suffix = alpha_split.group(2).upper()
+            elif not base_code:
+                base_code = c
+
+    for tm in re.findall(r"\b([1-9]\d{2})\b", clean_norm):
+        codes.add(tm)
+        if not base_code:
+            base_code = tm
+
+    primary_numeric = base_code or (next(iter(codes)) if codes else "")
+
+    return {
+        "raw": text,
+        "norm": norm,
+        "comp": comp,
+        "series": series.upper(),
+        "is_series_only": is_series_only,
+        "gen": gen.upper(),
+        "numeric": primary_numeric.upper(),
+        "base_code": base_code.upper(),
+        "suffix": suffix.upper(),
+        "codes": [c.upper() for c in codes],
+    }
 
 
-def query_fragments(query: str) -> List[str]:
-    normalized = normalize_model(query)
-    tokens = normalized.split()
-    fragments = []
-    for index, token in enumerate(tokens):
-        compact_token = compact_model(token)
-        has_letters = bool(re.search(r"[A-Z]", compact_token))
-        has_digits = bool(re.search(r"\d", compact_token))
-        if has_letters and has_digits:
-            fragments.append(compact_token)
-        elif compact_token.isdigit() and len(compact_token) >= 3:
-            fragments.append(compact_token)
+def match_score(q: dict, c: dict) -> dict:
+    score = 0
+    suffix_conflict = False
+    gen_conflict = False
+    numeric_matched = False
 
-        if index + 1 < len(tokens):
-            next_token = compact_model(tokens[index + 1])
-            if next_token and ((compact_token.isdigit() and len(next_token) <= 4 and re.search(r"[A-Z]", next_token))
-                               or (has_letters and has_digits and next_token.isdigit())):
-                fragments.append(compact_token + next_token)
+    if q["comp"] == c["comp"]:
+        return {"score": 100, "numeric_matched": True, "suffix_conflict": False, "gen_conflict": False}
 
-    if fragments:
-        return list(dict.fromkeys(fragments))
-    return [compact_model(normalized)] if compact_model(normalized) else []
+    if q["series"] and c["series"]:
+        if q["series"] == c["series"]:
+            score += 30
+        elif q["series"] in c["series"] or c["series"] in q["series"]:
+            score += 20
+        else:
+            return {"score": -100, "numeric_matched": False, "suffix_conflict": False, "gen_conflict": False}
+
+    matching_codes = [qc for qc in q["codes"] if len(qc) >= 3 and (qc in c["codes"] or (len(qc) >= 4 and qc in c["comp"]))]
+    if matching_codes:
+        score += 50
+        numeric_matched = True
+    elif q["numeric"] and len(q["numeric"]) >= 3 and (c["numeric"] == q["numeric"] or (len(q["numeric"]) >= 4 and q["numeric"] in c["comp"])):
+        score += 45
+        numeric_matched = True
+
+    if q["base_code"] and len(q["base_code"]) >= 3:
+        base_match = any(code == q["base_code"] or (len(code) >= 4 and (code.startswith(q["base_code"]) or q["base_code"].startswith(code))) for code in c["codes"])
+        if base_match:
+            if not numeric_matched:
+                score += 35
+                numeric_matched = True
+            if q["suffix"]:
+                if c["suffix"] and c["suffix"] == q["suffix"]:
+                    score += 25
+                elif q["suffix"] in c["comp"]:
+                    score += 20
+                else:
+                    suffix_conflict = True
+
+    if q["gen"] and c["gen"]:
+        if q["gen"] == c["gen"]:
+            score += 35
+            if not numeric_matched and q["series"] and c["series"] and q["series"] == c["series"]:
+                numeric_matched = True
+        else:
+            gen_conflict = True
+    elif q["gen"] and q["gen"] in c["comp"]:
+        score += 35
+        if not numeric_matched and q["series"] and c["series"] and q["series"] == c["series"]:
+            numeric_matched = True
+    elif q["gen"] and not c["gen"] and q["gen"] not in c["comp"]:
+        if numeric_matched:
+            gen_conflict = True
+
+    if not numeric_matched and len(q["comp"]) >= 4 and q["comp"] in c["comp"]:
+        score += 40
+        numeric_matched = True
+
+    return {"score": score, "numeric_matched": numeric_matched, "suffix_conflict": suffix_conflict, "gen_conflict": gen_conflict}
+
+
+def classify_match(query: str, catalog_variants: List[str]) -> dict:
+    q = extract_keys(query)
+    if not q["comp"]:
+        return {"status": "unavailable", "best_match": "", "matched_models": [], "reasoning": "No model query provided.", "confidence": 0}
+
+    if q["is_series_only"]:
+        series_matches = []
+        for raw in catalog_variants:
+            c = extract_keys(raw)
+            if c["series"] and (c["series"] == q["series"] or q["series"] in c["series"] or c["series"] in q["series"]):
+                series_matches.append(raw)
+        if series_matches:
+            return {
+                "status": "uncertain",
+                "best_match": series_matches[0],
+                "matched_models": series_matches[:10],
+                "reasoning": f"Multiple models found for {q['series']} series. Please specify your exact model number.",
+                "confidence": 60,
+            }
+
+    best = None
+    best_score = -999
+    partial_matches = []
+    exact_matches = []
+
+    for raw in catalog_variants:
+        c = extract_keys(raw)
+        res = match_score(q, c)
+        if res["score"] > 0:
+            if res["gen_conflict"] or res["suffix_conflict"]:
+                partial_matches.append((raw, res["score"]))
+            elif res["numeric_matched"]:
+                exact_matches.append((raw, res["score"]))
+            else:
+                partial_matches.append((raw, res["score"]))
+
+            if res["score"] > best_score:
+                best = raw
+                best_score = res["score"]
+
+    exact_matches.sort(key=lambda x: x[1], reverse=True)
+    partial_matches.sort(key=lambda x: x[1], reverse=True)
+
+    if exact_matches:
+        return {
+            "status": "available",
+            "best_match": exact_matches[0][0],
+            "matched_models": [m[0] for m in exact_matches],
+            "reasoning": "Exact model code & series confirmed in catalog stock.",
+            "confidence": 98,
+        }
+
+    if partial_matches:
+        return {
+            "status": "partial",
+            "best_match": partial_matches[0][0],
+            "matched_models": [m[0] for m in partial_matches],
+            "reasoning": "A related model exists in stock, but the specific generation or suffix differs.",
+            "confidence": 85,
+        }
+
+    for line in catalog_variants:
+        if q["comp"] in compact(line):
+            return {
+                "status": "available",
+                "best_match": line,
+                "matched_models": [line],
+                "reasoning": "Model text matched in catalog.",
+                "confidence": 92,
+            }
+
+    return {
+        "status": "unavailable",
+        "best_match": "",
+        "matched_models": [],
+        "reasoning": f"Model '{query.upper()}' was not found in the uploaded catalog.",
+        "confidence": 0,
+    }
 
 
 def find_model_matches(query: str, available_models: List[str]) -> List[str]:
-    fragments = query_fragments(query)
-    if not fragments:
-        return []
-    fragments = [max(fragments, key=len)]
-
-    exact_matches = []
-    partial_matches = []
-    for model in available_models:
-        model_compact = model_code(model)
-        if any(fragment and fragment == model_compact for fragment in fragments):
-            exact_matches.append(model)
-        elif any(fragment and (fragment in model_compact or model_compact in fragment) for fragment in fragments):
-            partial_matches.append(model)
-    return list(dict.fromkeys(exact_matches or partial_matches))
+    res = classify_match(query, available_models)
+    if res["matched_models"]:
+        return res["matched_models"]
+    return [res["best_match"]] if res["best_match"] else []
 
 
 def parse_assistant_json(answer: str) -> dict:
@@ -190,25 +451,29 @@ def ai_check():
     if not prompt:
         return jsonify({"error": "Prompt is required."}), 400
 
-    matches = find_model_matches(prompt, available_models)
+    classification = classify_match(prompt, available_models)
+    matches = classification["matched_models"]
+
     if not api_key:
         return jsonify({
-            "available": bool(matches),
-            "matchedModel": matches[0] if matches else None,
+            "status": classification["status"],
+            "available": classification["status"] == "available",
+            "matchedModel": classification["best_match"] or None,
             "matchedModels": matches,
-            "ambiguous": len(matches) > 1,
-            "reasoning": "Catalog result checked directly from the uploaded PDF. Set GOOGLE_API_KEY to enable Gemini explanations.",
-            "confidence": 98 if matches else 72,
+            "ambiguous": classification["status"] == "uncertain",
+            "reasoning": classification["reasoning"],
+            "confidence": classification["confidence"],
             "aiUnavailable": True,
         })
 
     model_list = ", ".join(available_models) if available_models else "No models provided."
     matched_list = ", ".join(matches) if matches else "No deterministic matches."
+    best_catalog = classification["best_match"] or "None"
     user_input = (
         f"User question: {prompt}\n"
         f"Available models from PDF: {model_list}\n"
-        f"Deterministic matches for the model fragment: {matched_list}\n"
-        "Determine if the requested model is available."
+        f"Deterministic pipeline result: Category = {classification['status'].upper()}, Best match = {best_catalog}, Matches = {matched_list}\n"
+        "Confirm if the requested model is available or partial based on the catalog."
     )
 
     answer = ""

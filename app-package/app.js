@@ -15,6 +15,73 @@ if ('caches' in window) {
   });
 }
 
+const SERIES_PATTERNS = [
+  { name: 'MacBook Air', regex: /\b(?:MACBOOK\s*AIR|MBA)\b/i },
+  { name: 'MacBook Pro', regex: /\b(?:MACBOOK\s*PRO|MBP)\b/i },
+  { name: 'MacBook', regex: /\bMACBOOK\b/i },
+  { name: 'Surface Laptop', regex: /\bSURFACE\s*LAPTOP\b/i },
+  { name: 'Surface Pro', regex: /\bSURFACE\s*PRO\b/i },
+  { name: 'Surface Book', regex: /\bSURFACE\s*BOOK\b/i },
+  { name: 'Surface', regex: /\bSURFACE\b/i },
+  { name: 'ThinkPad X1 Carbon', regex: /\b(?:THINKPAD\s*)?X1\s*CARBON\b/i },
+  { name: 'ThinkPad X1 Yoga', regex: /\b(?:THINKPAD\s*)?X1\s*YOGA\b/i },
+  { name: 'ThinkPad', regex: /\bTHINKPAD\b/i },
+  { name: 'IdeaPad Flex', regex: /\bIDEAPAD\s*FLEX\b/i },
+  { name: 'IdeaPad Gaming', regex: /\bIDEAPAD\s*GAMING\b/i },
+  { name: 'IdeaPad Slim', regex: /\bIDEAPAD\s*SLIM\b/i },
+  { name: 'IdeaPad', regex: /\bIDEAPAD\b/i },
+  { name: 'Legion', regex: /\bLEGION\b/i },
+  { name: 'LOQ', regex: /\bLOQ\b/i },
+  { name: 'Yoga', regex: /\bYOGA\b/i },
+  { name: 'EliteBook Folio', regex: /\bELITEBOOK\s*FOLIO\b/i },
+  { name: 'EliteBook x360', regex: /\bELITEBOOK\s*X360\b/i },
+  { name: 'EliteBook', regex: /\bELITEBOOK\b/i },
+  { name: 'ProBook x360', regex: /\bPROBOOK\s*X360\b/i },
+  { name: 'ProBook', regex: /\bPROBOOK\b/i },
+  { name: 'Pavilion Aero', regex: /\bPAVILION\s*AERO\b/i },
+  { name: 'Pavilion x360', regex: /\bPAVILION\s*X360\b/i },
+  { name: 'Pavilion', regex: /\bPAVILION\b/i },
+  { name: 'Envy x360', regex: /\bENVY\s*X360\b/i },
+  { name: 'Envy', regex: /\bENVY\b/i },
+  { name: 'Spectre x360', regex: /\bSPECTRE\s*X360\b/i },
+  { name: 'Spectre', regex: /\bSPECTRE\b/i },
+  { name: 'Victus', regex: /\bVICTUS\b/i },
+  { name: 'Omen', regex: /\bOMEN\b/i },
+  { name: 'Inspiron', regex: /\bINSPIRON\b/i },
+  { name: 'Latitude', regex: /\bLATITUDE\b/i },
+  { name: 'Vostro', regex: /\bVOSTRO\b/i },
+  { name: 'XPS', regex: /\bXPS\b/i },
+  { name: 'Precision', regex: /\bPRECISION\b/i },
+  { name: 'VivoBook S', regex: /\bVIVOBOOK\s*S\b/i },
+  { name: 'VivoBook Pro', regex: /\bVIVOBOOK\s*PRO\b/i },
+  { name: 'VivoBook Go', regex: /\bVIVOBOOK\s*GO\b/i },
+  { name: 'VivoBook', regex: /\bVIVOBOOK\b/i },
+  { name: 'ZenBook', regex: /\bZENBOOK\b/i },
+  { name: 'TUF Gaming', regex: /\bTUF\s*GAMING\b/i },
+  { name: 'TUF Dash', regex: /\bTUF\s*DASH\b/i },
+  { name: 'TUF', regex: /\bTUF\b/i },
+  { name: 'ROG Zephyrus', regex: /\bROG\s*ZEPHYRUS\b/i },
+  { name: 'ROG Strix', regex: /\bROG\s*STRIX\b/i },
+  { name: 'ROG', regex: /\bROG\b/i },
+  { name: 'ExpertBook', regex: /\bEXPERTBOOK\b/i },
+  { name: 'Aspire 1', regex: /\bASPIRE\s*1\b/i },
+  { name: 'Aspire 3', regex: /\bASPIRE\s*3\b/i },
+  { name: 'Aspire 5', regex: /\bASPIRE\s*5\b/i },
+  { name: 'Aspire 7', regex: /\bASPIRE\s*7\b/i },
+  { name: 'Aspire', regex: /\bASPIRE\b/i },
+  { name: 'Nitro 5', regex: /\bNITRO\s*5\b/i },
+  { name: 'Nitro', regex: /\bNITRO\b/i },
+  { name: 'Predator Helios Neo', regex: /\bPREDATOR\s*HELIOS\s*NEO\b/i },
+  { name: 'Predator Helios', regex: /\bPREDATOR\s*HELIOS\b/i },
+  { name: 'Predator', regex: /\bPREDATOR\b/i },
+  { name: 'Swift', regex: /\bSWIFT\b/i },
+  { name: 'Modern', regex: /\bMODERN\b/i },
+  { name: 'Blade', regex: /\bBLADE\b/i },
+  { name: 'Viper', regex: /\bVIPER\b/i }
+];
+
+const BRANDS = ['ACER', 'ASUS', 'DELL', 'APPLE', 'HP', 'LENOVO', 'MICROSOFT', 'MSI', 'RAZER', 'CANON', 'SAMSUNG'];
+
 class ModelChecker {
   constructor() {
     this.pdfText = '';
@@ -90,12 +157,20 @@ class ModelChecker {
     this.aiPanel.classList.toggle('active', !isManual);
   }
 
-  normalizeModel(value) {
-    return String(value || '')
-      .trim()
+  normalize(text) {
+    return String(text || '')
       .toUpperCase()
-      .replace(/\s+/g, '')
-      .replace(/[^A-Z0-9]/g, '');
+      .trim()
+      .replace(/[\t\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ');
+  }
+
+  compact(text) {
+    return String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
+  normalizeModel(value) {
+    return this.compact(value);
   }
 
   tokenizeModel(value) {
@@ -132,45 +207,299 @@ class ModelChecker {
     return '';
   }
 
+  extractKeys(text) {
+    const norm = this.normalize(text);
+    const comp = this.compact(norm);
+
+    // 1. Identify Series
+    let series = '';
+    for (const p of SERIES_PATTERNS) {
+      if (p.regex.test(norm)) {
+        series = p.name;
+        break;
+      }
+    }
+
+    // Check if text is solely a series or brand (e.g. "ThinkPad", "Dell Inspiron")
+    let cleanRemaining = norm;
+    for (const brand of BRANDS) {
+      cleanRemaining = cleanRemaining.replace(new RegExp(`\\b${brand}\\b`, 'gi'), '');
+    }
+    if (series) {
+      cleanRemaining = cleanRemaining.replace(new RegExp(series, 'gi'), '');
+    }
+    cleanRemaining = cleanRemaining.replace(/\b(?:LAPTOP|NOTEBOOK|SERIES|INCH|DEVICES?)\b/gi, '').trim();
+    const isSeriesOnly = Boolean(series && this.compact(cleanRemaining).length === 0);
+
+    // 2. Identify Generation / Silicon
+    let gen = '';
+    const hpGen = norm.match(/\b(?:G|GEN)\s*(\d{1,2})\b/i);
+    if (hpGen) gen = `G${hpGen[1]}`;
+    const appleM = norm.match(/\b(M[1-4](?:\s*(?:PRO|MAX|ULTRA))?)\b/i);
+    if (appleM) gen = appleM[1].replace(/\s+/g, '');
+    const genMatch = norm.match(/\bGEN\s*(\d{1,2})\b/i);
+    if (genMatch && !gen) gen = `GEN${genMatch[1]}`;
+
+    // 3. Extract all model codes
+    const codes = new Set();
+    let baseCode = '';
+    let suffix = '';
+
+    // Apple A-numbers (A2337, A2681, A1466, etc.)
+    const aMatches = norm.match(/\bA\d{4}\b/gi) || [];
+    for (const m of aMatches) codes.add(this.compact(m));
+
+    // Dell Regulatory P-numbers (P185G, P112F, P89G, etc.)
+    const pMatches = norm.match(/\bP\d{2,3}[A-Z]\b/gi) || [];
+    for (const m of pMatches) codes.add(this.compact(m));
+
+    // Surface Model numbers (Model 1868 -> 1868)
+    const surfMatches = norm.match(/\bMODEL\s*(\d{4})\b/gi) || [];
+    for (const m of surfMatches) {
+      const num = m.replace(/[^0-9]/g, '');
+      if (num) codes.add(num);
+    }
+
+    // Screen size cleanup: remove "13.6-inch", "15.6-inch", "14-inch" before code extraction
+    const cleanNorm = norm.replace(/\b\d{1,2}(?:\.\d)?\s*-\s*(?:INCH|IN)\b/gi, '')
+                          .replace(/\b\d{1,2}(?:\.\d)?\s*(?:INCH|IN|")\b/gi, '');
+
+    // Hyphenated codes (A315-58, FX506-LH, 15-dw3000, RZ09-0300, etc.)
+    const hyphenMatches = cleanNorm.match(/\b([A-Z]{0,4}\d{1,4}[A-Z]{0,2})\s*-\s*([A-Z0-9]{1,8})\b/gi) || [];
+    for (const hm of hyphenMatches) {
+      const parts = hm.split('-').map(s => this.compact(s));
+      if (parts[0] && parts[0].length >= 2) codes.add(parts[0]);
+      if (parts[1] && parts[1].length >= 2) codes.add(parts[1]);
+      const full = parts.join('');
+      if (full.length >= 3) codes.add(full);
+      if (!baseCode && parts[0] && parts[0].length >= 2) {
+        baseCode = parts[0];
+        suffix = parts[1] || '';
+      }
+    }
+
+    // General model codes (FX506LH, 15ITL6, 500D, 3511, 5420, 840, T14, X515, etc.)
+    const generalMatches = cleanNorm.match(/\b([A-Z]{1,4}\d{2,5}[A-Z]{0,4}|\d{2,4}[A-Z]{1,4}\d{0,4}|\d{4,5})\b/gi) || [];
+    for (const gm of generalMatches) {
+      const c = this.compact(gm);
+      if (!/^(19|20)\d{2}$/.test(c) && c.length >= 3) {
+        codes.add(c);
+        const alphaSplit = c.match(/^([A-Z]{1,4}\d{2,4})([A-Z]{1,4})$/i);
+        if (alphaSplit) {
+          codes.add(alphaSplit[1]);
+          if (!baseCode) {
+            baseCode = alphaSplit[1];
+            suffix = alphaSplit[2];
+          }
+        } else if (!baseCode) {
+          baseCode = c;
+        }
+      }
+    }
+
+    // Standalone 3-digit HP/Dell models (e.g. 840, 830, 850, 450)
+    const threeDigitMatches = cleanNorm.match(/\b([1-9]\d{2})\b/g) || [];
+    for (const tm of threeDigitMatches) {
+      codes.add(tm);
+      if (!baseCode) baseCode = tm;
+    }
+
+    const primaryNumeric = baseCode || (codes.size > 0 ? Array.from(codes)[0] : '');
+
+    return {
+      raw: text,
+      norm,
+      comp,
+      series: series.toUpperCase(),
+      isSeriesOnly,
+      gen: gen.toUpperCase(),
+      numeric: primaryNumeric.toUpperCase(),
+      baseCode: baseCode.toUpperCase(),
+      suffix: suffix.toUpperCase(),
+      codes: Array.from(codes).map(c => c.toUpperCase())
+    };
+  }
+
+  matchScore(q, c) {
+    let score = 0;
+    let suffixConflict = false;
+    let genConflict = false;
+    let numericMatched = false;
+
+    // 1. Direct whole-string match
+    if (q.comp === c.comp) {
+      return { score: 100, numericMatched: true, suffixConflict: false, genConflict: false };
+    }
+
+    // 2. Series comparison
+    if (q.series && c.series) {
+      if (q.series === c.series) {
+        score += 30;
+      } else if (c.series.includes(q.series) || q.series.includes(c.series)) {
+        score += 20;
+      } else {
+        // Conflicting series (e.g. ThinkPad vs IdeaPad, or EliteBook vs Pavilion)
+        return { score: -100, numericMatched: false, suffixConflict: false, genConflict: false };
+      }
+    }
+
+    // 3. Exact Code Matching across recognized codes
+    const matchingCodes = q.codes.filter(qc => qc.length >= 3 && (c.codes.includes(qc) || (qc.length >= 4 && c.comp.includes(qc))));
+    if (matchingCodes.length > 0) {
+      score += 50;
+      numericMatched = true;
+    } else if (q.numeric && q.numeric.length >= 3 && (c.numeric === q.numeric || (q.numeric.length >= 4 && c.comp.includes(q.numeric)))) {
+      score += 45;
+      numericMatched = true;
+    }
+
+    // 4. Base Code Matching with Suffix Evaluation
+    if (q.baseCode && q.baseCode.length >= 3) {
+      const baseMatch = c.codes.some(code => code === q.baseCode || (code.length >= 4 && (code.startsWith(q.baseCode) || q.baseCode.startsWith(code))));
+      if (baseMatch) {
+        if (!numericMatched) {
+          score += 35;
+          numericMatched = true;
+        }
+        // Check suffix conflict
+        if (q.suffix) {
+          if (c.suffix && c.suffix === q.suffix) {
+            score += 25;
+          } else if (c.comp.includes(q.suffix)) {
+            score += 20;
+          } else {
+            // User asked for specific suffix (e.g. 99 or IU), catalog has different suffix (58 or LH)
+            suffixConflict = true;
+          }
+        }
+      }
+    }
+
+    // 5. Generation comparison
+    if (q.gen && c.gen) {
+      if (q.gen === c.gen) {
+        score += 35;
+        if (!numericMatched && q.series && c.series && q.series === c.series) {
+          numericMatched = true;
+        }
+      } else {
+        // Conflicting generation (e.g. G2 vs G3, M3 vs M2)
+        genConflict = true;
+      }
+    } else if (q.gen && c.comp.includes(q.gen)) {
+      score += 35;
+      if (!numericMatched && q.series && c.series && q.series === c.series) {
+        numericMatched = true;
+      }
+    } else if (q.gen && !c.gen && !c.comp.includes(q.gen)) {
+      if (numericMatched) {
+        genConflict = true;
+      }
+    }
+
+    // 6. Substring fallback for clean codes
+    if (!numericMatched && q.comp.length >= 4 && c.comp.includes(q.comp)) {
+      score += 40;
+      numericMatched = true;
+    }
+
+    return { score, numericMatched, suffixConflict, genConflict };
+  }
+
+  classify(query, catalogVariants) {
+    const q = this.extractKeys(query);
+    if (!q.comp) {
+      return { category: 'UNAVAILABLE', bestMatch: '', matches: [] };
+    }
+
+    // If user only typed a series name without a model code (e.g. "ThinkPad" or "Inspiron")
+    if (q.isSeriesOnly) {
+      const seriesMatches = [];
+      for (const rawVariant of catalogVariants) {
+        const c = this.extractKeys(rawVariant);
+        if (c.series && (c.series === q.series || c.series.includes(q.series) || q.series.includes(c.series))) {
+          seriesMatches.push(rawVariant);
+        }
+      }
+      if (seriesMatches.length > 0) {
+        return {
+          category: 'UNCERTAIN',
+          bestMatch: seriesMatches[0],
+          matches: seriesMatches.slice(0, 10),
+          note: `Multiple models found for ${q.series}. Please specify your exact model number.`
+        };
+      }
+    }
+
+    let best = null;
+    let bestScored = null;
+    const partialMatches = [];
+    const exactMatches = [];
+
+    for (const rawVariant of catalogVariants) {
+      const c = this.extractKeys(rawVariant);
+      const res = this.matchScore(q, c);
+
+      if (res.score > 0) {
+        // Apply Suffix / Generation Conflict Hard Rule:
+        if (res.genConflict || res.suffixConflict) {
+          partialMatches.push({ variant: rawVariant, c, res });
+        } else if (res.numericMatched) {
+          exactMatches.push({ variant: rawVariant, c, res });
+        } else {
+          partialMatches.push({ variant: rawVariant, c, res });
+        }
+
+        if (!bestScored || res.score > bestScored.score) {
+          best = rawVariant;
+          bestScored = res;
+        }
+      }
+    }
+
+    exactMatches.sort((a, b) => b.res.score - a.res.score);
+    partialMatches.sort((a, b) => b.res.score - a.res.score);
+
+    if (exactMatches.length > 0) {
+      return {
+        category: 'AVAILABLE',
+        bestMatch: exactMatches[0].variant,
+        matches: exactMatches.map(m => m.variant),
+        note: 'Exact model code & series confirmed in catalog stock.'
+      };
+    }
+
+    if (partialMatches.length > 0) {
+      return {
+        category: 'PARTIAL',
+        bestMatch: partialMatches[0].variant,
+        matches: partialMatches.map(m => m.variant),
+        note: 'A related model exists in stock, but the specific generation or suffix differs.'
+      };
+    }
+
+    // Direct line substring fallback
+    const directLine = catalogVariants.find(line => this.compact(line).includes(q.comp));
+    if (directLine) {
+      return {
+        category: 'AVAILABLE',
+        bestMatch: directLine,
+        matches: [directLine],
+        note: 'Exact model text matched in catalog.'
+      };
+    }
+
+    return {
+      category: 'UNAVAILABLE',
+      bestMatch: '',
+      matches: [],
+      note: 'Model was not found in the uploaded catalog.'
+    };
+  }
+
   isModelMatch(query, model) {
-    const normalizedQuery = this.normalizeModel(query);
-    const normalizedModel = this.normalizeModel(model);
-
-    if (!normalizedQuery || !normalizedModel) return false;
-    if (normalizedQuery === normalizedModel) return true;
-
-    const queryCode = this.extractModelCode(query);
-    const modelCode = this.extractModelCode(model);
-
-    // Exact model code matching when both codes exist
-    if (queryCode && modelCode) {
-      return queryCode === modelCode;
-    }
-
-    // Direct substring match if query has at least 3 characters
-    if (normalizedQuery.length >= 3 && normalizedModel.includes(normalizedQuery)) {
-      return true;
-    }
-    if (normalizedModel.length >= 3 && normalizedQuery.includes(normalizedModel)) {
-      return true;
-    }
-
-    // Multi-token matching for phrases like "MacBook Air M1" or "IdeaPad 3"
-    const queryTokens = this.tokenizeModel(query).filter(t => t.length >= 2);
-    const modelTokens = this.tokenizeModel(model).filter(t => t.length >= 2);
-
-    if (!queryTokens.length || !modelTokens.length) return false;
-
-    const meaningfulQueryTokens = queryTokens.filter(t => !['LAPTOP', 'NOTEBOOK', 'THE', 'AND', 'FOR', 'SERIES', 'INCH'].includes(t));
-    if (!meaningfulQueryTokens.length) return false;
-
-    let matchedTokens = 0;
-    for (const token of meaningfulQueryTokens) {
-      const found = modelTokens.some(candidate => candidate === token || (candidate.length >= 3 && candidate.includes(token)));
-      if (found) matchedTokens += 1;
-    }
-
-    return matchedTokens === meaningfulQueryTokens.length || (meaningfulQueryTokens.length >= 2 && matchedTokens >= 2);
+    const res = this.classify(query, [model]);
+    return res.category === 'AVAILABLE';
   }
 
   isLikelyModel(value) {
@@ -299,46 +628,22 @@ class ModelChecker {
   }
 
   findLocalMatches(query) {
-    const normalizedQuery = this.normalizeModel(query);
-    if (!normalizedQuery) return [];
-
-    const matches = new Set();
-
-    // 1. Direct and code match across extracted models
-    for (const model of this.models) {
-      if (this.isModelMatch(query, model)) {
-        matches.add(this.displayModel(model));
-      }
-    }
-
-    // 2. Scan raw catalog lines for token matches (fallback for complex multi-word catalog lines)
-    if (matches.size === 0 && this.catalogLines.length > 0) {
-      const qTokens = this.tokenizeModel(query).filter(t => t.length >= 2 && !['THE', 'AND', 'FOR', 'SERIES', 'INCH', 'LAPTOP'].includes(t));
-      if (qTokens.length > 0) {
-        for (const line of this.catalogLines) {
-          const normLine = this.normalizeModel(line);
-          if (normLine.includes(normalizedQuery)) {
-            matches.add(line);
-          } else {
-            const allMatch = qTokens.every(token => normLine.includes(token));
-            if (allMatch) {
-              matches.add(line);
-            }
-          }
-        }
-      }
-    }
-
-    return Array.from(matches);
+    if (!query) return [];
+    const catalogVariants = this.catalogLines.length > 0
+      ? this.catalogLines
+      : Array.from(this.models).map(m => this.displayModel(m));
+    const res = this.classify(query, catalogVariants);
+    return res.matches.length > 0 ? res.matches : (res.bestMatch ? [res.bestMatch] : []);
   }
 
   renderCatalogMatches(matches, title = 'PDF catalog matches') {
+    if (!matches || !matches.length) return '';
     return `
       <div class="catalog-options">
         <div class="options-title">${title} <span>${matches.length}</span></div>
         <div class="catalog-list">
           ${matches.map((model, index) => `
-            <div class="catalog-option" style="--option-index: ${index};">
+            <div class="catalog-option" style="--option-index: ${index};" onclick="window.modelChecker && window.modelChecker.selectCatalogOption('${this.escapeHtml(model).replace(/'/g, "\\'")}')">
               <span class="option-number">${String(index + 1).padStart(2, '0')}</span>
               <span class="option-name">${this.escapeHtml(model)}</span>
               <span class="option-arrow">↗</span>
@@ -347,6 +652,12 @@ class ModelChecker {
         </div>
       </div>
     `;
+  }
+
+  selectCatalogOption(model) {
+    if (!model) return;
+    this.searchInput.value = model;
+    this.handleSearch();
   }
 
   async handlePDFUpload() {
@@ -410,31 +721,71 @@ class ModelChecker {
 
   async handleSearch() {
     const query = this.searchInput.value.trim();
-    const normalizedQuery = this.normalizeModel(query);
-    if (!normalizedQuery || !this.pdfLoaded) return;
+    if (!query || !this.pdfLoaded) return;
 
     this.searchBtn.disabled = true;
     this.searchResult.style.display = 'block';
-    // Force re-trigger animation by temporarily removing the class
     this.searchResult.className = '';
     void this.searchResult.offsetWidth; // reflow
     this.searchResult.className = 'result loading';
-    this.searchResult.innerHTML = '<div>Searching...</div>';
+    this.searchResult.innerHTML = '<div>Evaluating catalog variants...</div>';
 
-    const matchedModels = this.findLocalMatches(query);
-    const found = matchedModels.length > 0;
+    // Prioritize catalogLines, fallback to extracted models
+    const catalogVariants = this.catalogLines.length > 0
+      ? this.catalogLines
+      : Array.from(this.models).map(model => this.displayModel(model));
 
-    if (found) {
+    const result = this.classify(query, catalogVariants);
+
+    if (result.category === 'AVAILABLE') {
       this.searchResult.className = 'result available';
       this.searchResult.innerHTML = `
-        <div>✅ Available</div>
-        ${this.renderCatalogMatches(matchedModels)}
+        <div class="result-badge">✅ AVAILABLE IN CATALOG</div>
+        <div class="best-match-card">
+          <div class="best-match-header">
+            <span class="best-match-tag">Best Matching Catalog Line</span>
+            <span class="best-match-pill">100% MATCH</span>
+          </div>
+          <div class="best-match-line">${this.escapeHtml(result.bestMatch)}</div>
+          <div class="best-match-note">${this.escapeHtml(result.note || 'Exact model code & series confirmed in catalog.')}</div>
+        </div>
+        ${result.matches.length > 1 ? this.renderCatalogMatches(result.matches, 'All matching catalog variants') : ''}
+      `;
+    } else if (result.category === 'PARTIAL') {
+      this.searchResult.className = 'result partial';
+      this.searchResult.innerHTML = `
+        <div class="result-badge">◐ PARTIAL MATCH</div>
+        <div class="best-match-card">
+          <div class="best-match-header">
+            <span class="best-match-tag">Closest Catalog Line</span>
+            <span class="best-match-pill">DIFFERENT VARIANT</span>
+          </div>
+          <div class="best-match-line">${this.escapeHtml(result.bestMatch)}</div>
+          <div class="best-match-note">${this.escapeHtml(result.note || 'A related model exists in stock, but the specific generation or suffix differs.')}</div>
+        </div>
+        ${result.matches.length > 0 ? this.renderCatalogMatches(result.matches, 'Available catalog alternatives') : ''}
+      `;
+    } else if (result.category === 'UNCERTAIN') {
+      this.searchResult.className = 'result uncertain';
+      this.searchResult.innerHTML = `
+        <div class="result-badge">？ NEEDS CONFIRMATION</div>
+        <div class="best-match-card">
+          <div class="best-match-header">
+            <span class="best-match-tag">Series Detected</span>
+            <span class="best-match-pill">SPECIFY EXACT MODEL</span>
+          </div>
+          <div class="best-match-line">${this.escapeHtml(result.bestMatch)}</div>
+          <div class="best-match-note">${this.escapeHtml(result.note || 'Multiple models found for this series. Please enter your exact model number.')}</div>
+        </div>
+        ${result.matches.length > 0 ? this.renderCatalogMatches(result.matches, 'Models in this series') : ''}
       `;
     } else {
-      this.searchResult.className = 'result not-found';
+      this.searchResult.className = 'result unavailable';
       this.searchResult.innerHTML = `
-        <div>❌ Not Found</div>
-        <div class="match-info">Model: ${query.toUpperCase()}</div>
+        <div class="result-badge">❌ NOT FOUND IN CATALOG</div>
+        <div class="match-info" style="margin-top: 12px; font-size: 0.85rem;">
+          Model "<strong>${this.escapeHtml(query.toUpperCase())}</strong>" was not found in the uploaded catalog.
+        </div>
       `;
     }
 
@@ -487,12 +838,19 @@ class ModelChecker {
         ? data.matchedModels
         : (data.matchedModel ? [data.matchedModel] : []);
       const statusText = {
-        available: '✅ Available',
-        unavailable: '❌ Not in catalog',
-        partial: '◐ Partial match',
-        uncertain: '？ Needs confirmation'
-      }[data.status] || (data.available ? '✅ Available' : '❌ Not Found');
-      const statusClass = data.status === 'available' || data.available ? 'result available' : 'result not-found';
+        available: '✅ Available in Catalog',
+        unavailable: '❌ Not in Catalog',
+        partial: '◐ Partial Match',
+        uncertain: '？ Needs Confirmation'
+      }[data.status] || (data.available ? '✅ Available in Catalog' : '❌ Not in Catalog');
+
+      const statusClass = {
+        available: 'result available',
+        partial: 'result partial',
+        uncertain: 'result uncertain',
+        unavailable: 'result unavailable'
+      }[data.status] || (data.available ? 'result available' : 'result unavailable');
+
       const options = matchedModels.length
         ? this.renderCatalogMatches(matchedModels)
         : '';
@@ -501,7 +859,7 @@ class ModelChecker {
         : '';
       this.aiResult.className = statusClass;
       this.aiResult.innerHTML = `
-        <div>${statusText}</div>
+        <div class="result-badge">${statusText}</div>
         <div class="match-info">${this.escapeHtml(data.reasoning || 'AI assistant response')}</div>
         ${options}
         <div class="match-info">${data.ambiguous ? 'Please enter the exact model name for a precise result.' : `Matched model: ${this.escapeHtml(data.matchedModel || 'None')}`}</div>
@@ -516,16 +874,16 @@ class ModelChecker {
       if (localMatches.length) {
         this.aiResult.className = 'result available';
         this.aiResult.innerHTML = `
-          <div>✅ Available in your PDF</div>
+          <div class="result-badge">✅ Available in Catalog</div>
           ${this.renderCatalogMatches(localMatches)}
           <div class="match-info">AI explanation is temporarily unavailable, but the catalog match is confirmed locally.</div>
         `;
         this.aiStatus.textContent = 'Catalog result ready';
         return;
       }
-      this.aiResult.className = 'result not-found';
+      this.aiResult.className = 'result unavailable';
       this.aiResult.innerHTML = `
-        <div>❌ AI lookup failed</div>
+        <div class="result-badge">❌ AI Lookup Failed</div>
         <div class="match-info">${this.escapeHtml(error.message)}</div>
       `;
       this.aiStatus.textContent = 'API connection issue. Check your Python backend and Google key.';
@@ -538,7 +896,7 @@ class ModelChecker {
     if (!this.pdfLoaded) {
       this.aiStatus.textContent = 'Upload your PDF catalog first.';
       this.aiResult.style.display = 'block';
-      this.aiResult.className = 'result not-found';
+      this.aiResult.className = 'result unavailable';
       this.aiResult.innerHTML = '<div>Upload a PDF before scanning an image.</div>';
       return;
     }
@@ -566,14 +924,22 @@ class ModelChecker {
 
       const matches = Array.isArray(data.matchedModels) ? data.matchedModels : [];
       const imageStatusText = {
-        available: '✅ Available in your PDF',
-        unavailable: '❌ Not in your PDF',
-        partial: '◐ Partial catalog match',
-        uncertain: '？ Model needs confirmation'
-      }[data.status] || (data.available ? '✅ Available in your PDF' : '❌ Not Found in your PDF');
-      this.aiResult.className = data.status === 'available' || data.available ? 'result available' : 'result not-found';
+        available: '✅ Available in Catalog',
+        unavailable: '❌ Not in Catalog',
+        partial: '◐ Partial Match',
+        uncertain: '？ Model Needs Confirmation'
+      }[data.status] || (data.available ? '✅ Available in Catalog' : '❌ Not in Catalog');
+
+      const imageStatusClass = {
+        available: 'result available',
+        partial: 'result partial',
+        uncertain: 'result uncertain',
+        unavailable: 'result unavailable'
+      }[data.status] || (data.available ? 'result available' : 'result unavailable');
+
+      this.aiResult.className = imageStatusClass;
       this.aiResult.innerHTML = `
-        <div>${imageStatusText}</div>
+        <div class="result-badge">${imageStatusText}</div>
         <div class="match-info"><strong>AI identified:</strong> ${this.escapeHtml(data.identifiedModel || 'Model not clear')}</div>
         ${matches.length ? this.renderCatalogMatches(matches, 'PDF catalog matches') : ''}
         <div class="match-info">${this.escapeHtml(data.reasoning || 'The assistant could not identify a confident model.')}</div>

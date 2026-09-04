@@ -613,20 +613,103 @@ textarea:focus {
 }
 
 .result.available {
-  border: 1px solid rgba(84, 240, 177, 0.25);
+  border: 1px solid rgba(84, 240, 177, 0.3);
   color: var(--green);
   background: var(--green-dim);
-  box-shadow: 0 8px 28px rgba(84, 240, 177, 0.06);
+  box-shadow: 0 8px 28px rgba(84, 240, 177, 0.08);
 }
-.result.not-found {
-  border: 1px solid rgba(255, 126, 179, 0.2);
+
+.result.partial {
+  border: 1px solid rgba(86, 232, 255, 0.35);
+  color: var(--cyan);
+  background: rgba(86, 232, 255, 0.08);
+  box-shadow: 0 8px 28px rgba(86, 232, 255, 0.08);
+}
+
+.result.uncertain {
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  color: var(--violet);
+  background: rgba(192, 132, 252, 0.08);
+  box-shadow: 0 8px 28px rgba(192, 132, 252, 0.08);
+}
+
+.result.not-found,
+.result.unavailable {
+  border: 1px solid rgba(255, 126, 179, 0.25);
   color: var(--red);
   background: var(--red-dim);
+  box-shadow: 0 8px 28px rgba(255, 126, 179, 0.06);
 }
+
 .result.loading {
   border: 1px solid rgba(255, 212, 117, 0.25);
   color: var(--amber);
   background: var(--amber-dim);
+}
+
+.result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid currentColor;
+}
+
+.best-match-card {
+  margin-top: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.best-match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.best-match-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+
+.best-match-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.best-match-line {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.best-match-note {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.5;
 }
 
 .result .match-info {
