@@ -99,8 +99,14 @@ class ModelChecker {
   }
 
   tokenizeModel(value) {
-    const normalized = this.normalizeModel(value);
-    return (normalized.match(/[A-Z]+\d+|\d+[A-Z]+|[A-Z]+|\d+/g) || []).filter(Boolean);
+    const rawTokens = String(value || '').toUpperCase().match(/[A-Z0-9]+/g) || [];
+    const tokens = [];
+    for (const t of rawTokens) {
+      tokens.push(t);
+      const sub = t.match(/[A-Z]+\d+|\d+[A-Z]+|[A-Z]+|\d+/g) || [];
+      if (sub.length > 1) tokens.push(...sub);
+    }
+    return Array.from(new Set(tokens.filter(Boolean)));
   }
 
   extractModelCode(value) {
@@ -150,8 +156,8 @@ class ModelChecker {
     }
 
     // Multi-token matching for phrases like "MacBook Air M1" or "IdeaPad 3"
-    const queryTokens = this.tokenizeModel(normalizedQuery).filter(t => t.length >= 2);
-    const modelTokens = this.tokenizeModel(normalizedModel).filter(t => t.length >= 2);
+    const queryTokens = this.tokenizeModel(query).filter(t => t.length >= 2);
+    const modelTokens = this.tokenizeModel(model).filter(t => t.length >= 2);
 
     if (!queryTokens.length || !modelTokens.length) return false;
 
@@ -230,32 +236,42 @@ class ModelChecker {
 
     // Comprehensive case-insensitive regex patterns for all major laptop catalog formats
     const patterns = [
-      // 1. Hyphenated: A315-58, A515-56, AN515-57, SF314-511, PH315-54, FA506-IC, FX505-DT
-      /[a-zA-Z]{1,4}\d{2,5}-[a-zA-Z0-9]{1,6}/gi,
-      // 2. HP hyphenated: 15-dw3000, 15s-fq5000, 15-dy2000, 14-dq1000, 15-eg, 15-fb, 14-dv, 16-d, 15s-du
+      // 1. Hyphenated: A315-58, A515-56, AN515-57, SF314-511, PH315-54, FA506-IC, FX505-DT, RZ09-0300, X-T30
+      /[a-zA-Z]{1,4}\d{1,5}-[a-zA-Z0-9]{1,6}/gi,
+      // 2. HP hyphenated: 15-dw3000, 15s-fq5000, 15-dy2000, 14-dq1000, 15-eg, 15-fb, 14-dv, 16-d, 15s-du, 15-fc, 15-fd
       /\d{2,3}[a-zA-Z]{0,2}-[a-zA-Z]{1,4}\d{0,5}[a-zA-Z]{0,3}/gi,
       // 3. Standalone hyphenated: UX-425, G-513, etc.
       /[a-zA-Z]{2,6}-[a-zA-Z0-9]{2,6}/gi,
-      // 4. Alphanumeric: X515EA, FX506LH, GA401, UX425, A2337, A2681, A2442, T480, T490
+      // 4. Alphanumeric: X515EA, FX506LH, GA401, UX425, A2337, A2681, A2442, T480, T490, 500D, RC30, 573G, B10MW
       /[a-zA-Z]{1,4}\d{2,5}[a-zA-Z]{0,4}/gi,
-      // 5. Lenovo style: 15ITL6, 15ALC6, 15IAU7, 15AMN7, 15IAL7, 15ACH6, 16ACH6H, 15IRH8, 15ITL05, 14ITL6
+      // 5. Digits followed by letters: 500D, 573G, 75G, 14ISK, 14IKB, 14KBR, 14IAU7, 14IRU8, 14abr8, 8460p, 8470p
+      /\d{2,4}[a-zA-Z]{1,5}/gi,
+      // 6. Lenovo style: 15ITL6, 15ALC6, 15IAU7, 15AMN7, 15IAL7, 15ACH6, 16ACH6H, 15IRH8, 15ITL05, 14ITL6
       /\d{2,3}[a-zA-Z]{1,4}\d{1,4}[a-zA-Z0-9]{0,3}/gi,
-      // 6. G series / EliteBook / ProBook: 840 G3, 840 G5, 830 G5, 850 G6, 450 G8, 1040 G3, G15 5511, G15 5515
+      // 7. G series / EliteBook / ProBook: 840 G3, 840 G5, 830 G5, 850 G6, 450 G8, 1040 G3, G15 5511, G15 5515, 250 g10, 255 g10
       /\d{3,5}\s*[a-zA-Z]\s*\d{1,3}[a-zA-Z0-9]{0,2}/gi,
-      // 7. ThinkPad Gen: T14 Gen 1, T14 Gen 2, X1 Carbon Gen 9, E14 Gen 2
-      /[a-zA-Z]{1,3}\d{1,3}\s*(?:Gen\s*\d{1,2}|s)?/gi,
-      // 8. Series + model names: Inspiron 15 3511, Latitude 5420, Vostro 3510, XPS 15 9510, MacBook Air M1
-      /(?:Inspiron|Latitude|Vostro|XPS|Pavilion|Envy|Spectre|Victus|Omen|ThinkPad|IdeaPad|Legion|Yoga|LOQ|VivoBook|ZenBook|TUF|ROG|Aspire|Swift|Nitro|Predator|MacBook)\s+(?:[A-Za-z0-9-]+\s+)*[A-Za-z0-9-]+/gi,
-      // 9. Apple model numbers: A2337, A2681, A2338, A2442, A2485, A2141
+      // 8. ThinkPad Gen: T14 Gen 1, T14 Gen 2, X1 Carbon Gen 9, E14 Gen 2, Gen 7, Gen 8, Gen 10
+      /[a-zA-Z0-9]{1,3}\s*(?:Gen\s*\d{1,2}|s)?/gi,
+      // 9. Dell regulatory numbers: (P185G), P112F, P89G, P90F, P28F, P40F, P47F, P64G, P51F, P66F, P144G, P38F, P98G, P99G
+      /\bP\d{2,3}[A-Za-z]\b/gi,
+      // 10. Surface model numbers: Model 1868, Model 1769
+      /\bModel\s*\d{4}\b/gi,
+      // 11. Lenovo machine codes: (81W1), (81W4), (82KU), (82MF), (83ER), (83EM)
+      /\b\d{2}[A-Za-z0-9]{2}\b/gi,
+      // 12. Series + model names: Inspiron 15 3511, Latitude 5420, Vostro 3510, XPS 15 9510, MacBook Air M1, Surface Laptop 3
+      /(?:Inspiron|Latitude|Vostro|XPS|Pavilion|Envy|Spectre|Victus|Omen|ThinkPad|IdeaPad|Legion|Yoga|LOQ|VivoBook|ZenBook|TUF|ROG|Aspire|Swift|Nitro|Predator|MacBook|Surface)\s+(?:[A-Za-z0-9-]+\s+)*[A-Za-z0-9-]+/gi,
+      // 13. Apple model numbers: A2337, A2681, A2338, A2442, A2485, A2141, A1465, A1466, A1369, A1237, A1304, A3240, A3113, A2780
       /\bA\d{4}\b/gi,
-      // 10. Standalone 4-5 digit model numbers in lines (3511, 5420, 9305)
+      // 14. Standalone 4-5 digit model numbers in lines (3510, 3511, 3515, 3520, 3530, 5420, 9305, 1868, 1769)
       /\b\d{4,5}\b/g
     ];
 
     for (const line of this.catalogLines) {
       // Clean variant with normalized spacing around hyphens: "A315 - 58" => "A315-58"
       const normalizedLine = line.replace(/\s*-\s*/g, '-');
-      const testLines = [line, normalizedLine];
+      // Sub-items separated by commas, semicolons, or slashes
+      const subItems = line.split(/[,;/|]+/).map(s => s.trim()).filter(s => s.length >= 2);
+      const testLines = [line, normalizedLine, ...subItems];
 
       for (const currentLine of testLines) {
         for (const pattern of patterns) {
@@ -295,9 +311,9 @@ class ModelChecker {
       }
     }
 
-    // 2. Scan raw catalog lines for exact token matches (fallback for complex multi-word catalog lines)
+    // 2. Scan raw catalog lines for token matches (fallback for complex multi-word catalog lines)
     if (matches.size === 0 && this.catalogLines.length > 0) {
-      const qTokens = this.tokenizeModel(normalizedQuery).filter(t => t.length >= 2);
+      const qTokens = this.tokenizeModel(query).filter(t => t.length >= 2 && !['THE', 'AND', 'FOR', 'SERIES', 'INCH', 'LAPTOP'].includes(t));
       if (qTokens.length > 0) {
         for (const line of this.catalogLines) {
           const normLine = this.normalizeModel(line);
