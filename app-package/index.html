@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#06050e" />
+    <meta name="theme-color" content="#14231e" />
     <meta name="description" content="SkinSync — instantly check if a laptop skin design is available for your model. Upload a PDF catalog and search by model or let AI identify it from a photo." />
     <title>SkinSync — Laptop Skin Finder</title>
-    <link rel="stylesheet" href="style.css?v=71" />
+    <link rel="stylesheet" href="style.css?v=74" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   </head>
   <body>
@@ -14,11 +14,14 @@
       <header class="topbar">
         <div class="brand-wrap">
           <div class="brand-mark">S</div>
-          <div>
+          <div class="brand-copy">
+            <div class="brand-kicker">SMART SKIN STUDIO</div>
             <div class="brand-name">SkinSync</div>
-            <div class="brand-tag">laptop skin finder</div>
+            <div class="brand-tag">find your perfect laptop fit</div>
           </div>
         </div>
+
+        <div class="topbar-trust"><span></span> Smart catalog search</div>
 
         <div class="tab-switcher" aria-label="App modes">
           <button class="nav-btn active" id="manualTabBtn" type="button">
@@ -48,13 +51,23 @@
 
         <section id="manualPanel" class="panel active">
           <div class="hero-card">
-            <span class="eyebrow">Instant local scan</span>
-            <h1>Find if your laptop skin is in stock</h1>
-            <p>Search by model number (e.g. A315-58, 840 G3, 15-dw3000, Inspiron 3511) to check exact catalog availability in milliseconds.</p>
+            <div class="hero-copy">
+              <span class="eyebrow">Your skin, made to fit</span>
+              <h1>Find the right skin<br />for your laptop.</h1>
+              <p>Type a full model, short code, or lowercase name. SkinSync finds the exact available match from your catalog.</p>
+              <div class="hero-pills" aria-label="App highlights">
+                <span>Exact match</span><span>Smart variants</span><span>Instant result</span>
+              </div>
+            </div>
+            <div class="hero-visual" aria-hidden="true">
+              <div class="laptop-shape"><div></div></div>
+              <div class="float-tag tag-one">✓ Model matched</div>
+              <div class="float-tag tag-two">PDF powered</div>
+            </div>
           </div>
 
           <div class="card">
-            <h2><span class="icon">🔎</span> 2. Search model</h2>
+            <div class="search-heading"><h2><span class="icon">🔎</span> Find your model</h2><span>Step 2 of 2</span></div>
             <div class="search-box">
               <input type="text" id="searchInput" placeholder="Try: A315-58, 840 G3, 15-dw3000, 3511, or T480" />
               <button class="btn btn-primary" id="searchBtn" disabled>
@@ -98,6 +111,6 @@
     </div>
 
     <script src="config.js?v=1"></script>
-    <script src="app.js?v=73"></script>
+    <script src="app.js?v=74"></script>
   </body>
 </html>
