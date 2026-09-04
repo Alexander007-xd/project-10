@@ -87,13 +87,27 @@ class ModelChecker {
     return (normalized.match(/[A-Z]+\d+|\d+[A-Z]+|[A-Z]+|\d+/g) || []).filter(Boolean);
   }
 
+  extractModelCode(value) {
+    const compact = this.normalizeModel(value);
+    const numericCode = compact.match(/\d{3,6}[A-Z]\d{1,3}[A-Z]?|\d{3,6}[A-Z]{1,3}/g);
+    if (numericCode) return numericCode.sort((left, right) => right.length - left.length)[0];
+    const letterCode = compact.match(/[A-Z]{1,6}\d{2,6}[A-Z]{0,3}/g);
+    return letterCode ? letterCode.sort((left, right) => right.length - left.length)[0] : '';
+  }
+
   isModelMatch(query, model) {
     const normalizedQuery = this.normalizeModel(query);
     const normalizedModel = this.normalizeModel(model);
 
     if (!normalizedQuery || !normalizedModel) return false;
     if (normalizedQuery === normalizedModel) return true;
-    if (normalizedModel.includes(normalizedQuery) || normalizedQuery.includes(normalizedModel)) return true;
+
+    const queryCode = this.extractModelCode(query);
+    const modelCode = this.extractModelCode(model);
+    if (queryCode) return queryCode === modelCode;
+    if (modelCode) return /^[A-Z0-9]{3,}$/.test(normalizedQuery) && modelCode.includes(normalizedQuery);
+
+    if (/^[A-Z0-9]{3,}$/.test(normalizedQuery) && normalizedModel.includes(normalizedQuery)) return true;
 
     const queryTokens = this.tokenizeModel(normalizedQuery);
     const modelTokens = this.tokenizeModel(normalizedModel);
