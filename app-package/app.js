@@ -228,22 +228,22 @@ class ModelChecker {
     this.searchResult.className = 'result loading';
     this.searchResult.innerHTML = '<div>Searching...</div>';
 
-    let found = false;
-    let matchedModel = query.toUpperCase();
-
-    for (const model of this.models) {
-      if (this.isModelMatch(query, model)) {
-        found = true;
-        matchedModel = model;
-        break;
-      }
-    }
+    const matchedModels = this.findLocalMatches(query);
+    const found = matchedModels.length > 0;
 
     if (found) {
       this.searchResult.className = 'result available';
       this.searchResult.innerHTML = `
         <div>✅ Available</div>
-        <div class="match-info">Model: ${matchedModel}</div>
+        <div class="catalog-options">
+          <div class="options-title">PDF catalog matches (${matchedModels.length})</div>
+          ${matchedModels.map((model, index) => `
+            <div class="catalog-option">
+              <span class="option-number">${index + 1}</span>
+              <span>${this.escapeHtml(model)}</span>
+            </div>
+          `).join('')}
+        </div>
       `;
     } else {
       this.searchResult.className = 'result not-found';
