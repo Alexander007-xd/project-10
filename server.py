@@ -168,7 +168,42 @@ SERIES_PATTERNS = [
     ("Viper", re.compile(r"\bVIPER\b", re.I)),
 ]
 
-BRANDS = {"ACER", "ASUS", "DELL", "APPLE", "HP", "LENOVO", "MICROSOFT", "MSI", "RAZER", "CANON", "SAMSUNG"}
+BRANDS = {"ACER", "ASUS", "DELL", "APPLE", "HP", "LENOVO", "MICROSOFT", "MSI", "RAZER", "CANON", "SAMSUNG", "SONY", "TOSHIBA", "LG", "ALIENWARE"}
+
+SERIES_BRAND_MAP = {
+    "ELITEBOOK": "HP", "PROBOOK": "HP", "PAVILION": "HP", "ENVY": "HP", "SPECTRE": "HP", "VICTUS": "HP", "OMEN": "HP", "ZBOOK": "HP",
+    "THINKPAD": "LENOVO", "IDEAPAD": "LENOVO", "LEGION": "LENOVO", "YOGA": "LENOVO", "LOQ": "LENOVO", "THINKBOOK": "LENOVO",
+    "INSPIRON": "DELL", "LATITUDE": "DELL", "VOSTRO": "DELL", "XPS": "DELL", "PRECISION": "DELL", "ALIENWARE": "DELL",
+    "VIVOBOOK": "ASUS", "ZENBOOK": "ASUS", "TUF": "ASUS", "ROG": "ASUS", "EXPERTBOOK": "ASUS", "ZEPHYRUS": "ASUS", "STRIX": "ASUS",
+    "ASPIRE": "ACER", "SWIFT": "ACER", "NITRO": "ACER", "PREDATOR": "ACER", "SPIN": "ACER", "TRAVELMATE": "ACER",
+    "MACBOOK": "APPLE", "SURFACE": "MICROSOFT",
+    "MODERN": "MSI", "PRESTIGE": "MSI", "STEALTH": "MSI", "RAIDER": "MSI", "KATANA": "MSI", "SWORD": "MSI", "CYBORG": "MSI",
+    "BLADE": "RAZER", "VIPER": "RAZER"
+}
+
+BRAND_AND_SERIES = [
+    "ACER", "ASUS", "DELL", "APPLE", "MACBOOK", "MICROSOFT", "SURFACE",
+    "HP", "LENOVO", "MSI", "RAZER", "CANON", "SAMSUNG", "SONY", "TOSHIBA", "LG", "ALIENWARE",
+    "THINKPAD", "IDEAPAD", "LEGION", "YOGA", "LOQ", "THINKBOOK",
+    "ELITEBOOK", "PROBOOK", "PAVILION", "ENVY", "SPECTRE", "VICTUS", "OMEN", "ZBOOK",
+    "INSPIRON", "LATITUDE", "VOSTRO", "XPS", "PRECISION",
+    "VIVOBOOK", "ZENBOOK", "TUF", "ROG", "EXPERTBOOK", "ZEPHYRUS", "STRIX",
+    "ASPIRE", "SWIFT", "NITRO", "PREDATOR", "SPIN", "TRAVELMATE",
+    "MODERN", "PRESTIGE", "STEALTH", "RAIDER", "KATANA", "SWORD", "CYBORG", "TITAN", "VECTOR",
+    "BLADE", "VIPER"
+]
+
+BRAND_SERIES_PAIRS = {
+    "HP": ["ELITEBOOK", "PROBOOK", "PAVILION", "ENVY", "SPECTRE", "VICTUS", "OMEN", "ZBOOK"],
+    "LENOVO": ["THINKPAD", "IDEAPAD", "LEGION", "YOGA", "LOQ", "THINKBOOK"],
+    "DELL": ["INSPIRON", "LATITUDE", "VOSTRO", "XPS", "PRECISION", "ALIENWARE"],
+    "ASUS": ["VIVOBOOK", "ZENBOOK", "TUF", "ROG", "EXPERTBOOK", "ZEPHYRUS", "STRIX"],
+    "ACER": ["ASPIRE", "SWIFT", "NITRO", "PREDATOR", "SPIN", "TRAVELMATE"],
+    "APPLE": ["MACBOOK"],
+    "MICROSOFT": ["SURFACE"],
+    "MSI": ["MODERN", "PRESTIGE", "STEALTH", "RAIDER", "KATANA", "SWORD", "CYBORG", "TITAN", "VECTOR"],
+    "RAZER": ["BLADE", "VIPER"]
+}
 
 
 def normalize(text: str) -> str:
@@ -179,20 +214,39 @@ def compact(text: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", normalize(text))
 
 
-def split_multi_brand_line(line: str) -> list:
-    brand_pattern = re.compile(r"\b(Acer|Asus|Dell|Apple|MacBook|Microsoft|Surface|HP|Lenovo|MSI|Razer|Canon|Alienware|Samsung|Sony|Toshiba|LG)\b", re.I)
-    matches = [{"index": m.start(), "brand": m.group(1)} for m in brand_pattern.finditer(line)]
+def is_brand_series_pair(brand: str, series: str) -> bool:
+    b = brand.upper()
+    s = series.upper()
+    return bool(b in BRAND_SERIES_PAIRS and s in BRAND_SERIES_PAIRS[b])
+
+
+def is_consecutive_series_pair(first: str, second: str) -> bool:
+    f = first.upper()
+    s = second.upper()
+    return f == "ROG" and s in ("ZEPHYRUS", "STRIX")
+
+
+def split_multi_model_line(line: str) -> list:
+    pattern = re.compile(rf"\b({'|'.join(BRAND_AND_SERIES)})\b", re.I)
+    matches = [{"index": m.start(), "word": m.group(1)} for m in pattern.finditer(line)]
     if len(matches) <= 1:
         return [line.strip()]
 
     split_indices = []
     for i, curr in enumerate(matches):
-        if i > 0:
-            prev = matches[i - 1]
-            if (re.search(r"Apple", prev["brand"], re.I) and re.search(r"MacBook", curr["brand"], re.I)) or \
-               (re.search(r"Microsoft", prev["brand"], re.I) and re.search(r"Surface", curr["brand"], re.I)):
-                continue
+        if i == 0:
+            split_indices.append(curr["index"])
+            continue
+        prev = matches[i - 1]
+        gap = line[prev["index"] + len(prev["word"]):curr["index"]].strip()
+        is_bs = is_brand_series_pair(prev["word"], curr["word"])
+        is_sp = is_consecutive_series_pair(prev["word"], curr["word"])
+        if len(gap) <= 2 and (is_bs or is_sp):
+            continue
         split_indices.append(curr["index"])
+
+    if len(split_indices) <= 1:
+        return [line.strip()]
 
     chunks = []
     for i, start in enumerate(split_indices):
@@ -201,6 +255,18 @@ def split_multi_brand_line(line: str) -> list:
         if len(chunk) > 2:
             chunks.append(chunk)
     return chunks
+
+
+def isolate_matching_chunk(line: str, q: dict) -> str:
+    chunks = split_multi_model_line(line)
+    if len(chunks) <= 1:
+        return line
+    for chunk in chunks:
+        chunk_keys = extract_keys(chunk)
+        res = match_score(q, chunk_keys)
+        if res["numeric_matched"] and not res["gen_conflict"] and not res["suffix_conflict"]:
+            return chunk
+    return chunks[0]
 
 
 def expand_sub_models(entry: str) -> list:
@@ -267,7 +333,7 @@ def clean_catalog_lines(raw_catalog: List[str]) -> List[str]:
         if not trimmed or re.match(r"^(Acer\s+Asus\s+Dell|Brand|Model|Laptop|Catalog)", trimmed, re.I):
             continue
 
-        brand_chunks = split_multi_brand_line(trimmed)
+        brand_chunks = split_multi_model_line(trimmed)
         for chunk in brand_chunks:
             semi_parts = chunk.split(";")
             parent_brand = ""
@@ -309,6 +375,8 @@ def extract_keys(text: str) -> dict:
         if re.search(rf"\b{b}\b", norm, re.I):
             brand = b
             break
+    if not brand and series:
+        brand = SERIES_BRAND_MAP.get(series.upper(), "")
 
     clean = norm
     for b in BRANDS:
@@ -526,10 +594,11 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
 
     # If exact model match found:
     if exact_match_line:
+        clean_matched = isolate_matching_chunk(exact_match_line, q)
         return {
             "status": "available",
             "is_exact_match": True,
-            "best_match": exact_match_line,
+            "best_match": clean_matched,
             "matched_models": [],  # NOTHING EXTRA!
             "reasoning": f"Model '{query.strip()}' is available in stock.",
             "confidence": 98,
@@ -537,11 +606,12 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
 
     # 2. Partial Conflict:
     if partial_conflict_matches:
+        clean_matched = isolate_matching_chunk(partial_conflict_matches[0], q)
         return {
             "status": "partial",
             "is_exact_match": False,
-            "best_match": partial_conflict_matches[0],
-            "matched_models": partial_conflict_matches,
+            "best_match": clean_matched,
+            "matched_models": [isolate_matching_chunk(m, q) for m in partial_conflict_matches],
             "reasoning": f"The exact model '{query.strip()}' was not found, but other variants of this model are in stock:",
             "confidence": 85,
         }
@@ -579,10 +649,28 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
 
     if same_model_variants:
         if len(same_model_variants) == 1:
+            clean_matched = isolate_matching_chunk(same_model_variants[0], q)
             return {
                 "status": "available",
                 "is_exact_match": True,
-                "best_match": same_model_variants[0],
+                "best_match": clean_matched,
+                "matched_models": [],
+                "reasoning": f"Model '{query.strip()}' is available in stock.",
+                "confidence": 95,
+            }
+        unique_isolated = []
+        seen_iso = set()
+        for v in same_model_variants:
+            iso = isolate_matching_chunk(v, q)
+            k = compact(iso)
+            if len(k) >= 2 and k not in seen_iso:
+                seen_iso.add(k)
+                unique_isolated.append(iso)
+        if len(unique_isolated) == 1:
+            return {
+                "status": "available",
+                "is_exact_match": True,
+                "best_match": unique_isolated[0],
                 "matched_models": [],
                 "reasoning": f"Model '{query.strip()}' is available in stock.",
                 "confidence": 95,
@@ -591,7 +679,7 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
             "status": "partial",
             "is_exact_match": False,
             "best_match": f"{query.strip()} Variants",
-            "matched_models": same_model_variants,
+            "matched_models": unique_isolated,
             "reasoning": f"Multiple variants found for '{query.strip()}'. Available options:",
             "confidence": 90,
         }

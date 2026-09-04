@@ -80,7 +80,76 @@ const SERIES_PATTERNS = [
   { name: 'Viper', regex: /\bVIPER\b/i }
 ];
 
-const BRANDS = ['ACER', 'ASUS', 'DELL', 'APPLE', 'HP', 'LENOVO', 'MICROSOFT', 'MSI', 'RAZER', 'CANON', 'SAMSUNG'];
+const BRANDS = ['ACER', 'ASUS', 'DELL', 'APPLE', 'HP', 'LENOVO', 'MICROSOFT', 'MSI', 'RAZER', 'CANON', 'SAMSUNG', 'SONY', 'TOSHIBA', 'LG', 'ALIENWARE'];
+
+const SERIES_BRAND_MAP = {
+  ELITEBOOK: 'HP',
+  PROBOOK: 'HP',
+  PAVILION: 'HP',
+  ENVY: 'HP',
+  SPECTRE: 'HP',
+  VICTUS: 'HP',
+  OMEN: 'HP',
+  ZBOOK: 'HP',
+  THINKPAD: 'LENOVO',
+  IDEAPAD: 'LENOVO',
+  LEGION: 'LENOVO',
+  YOGA: 'LENOVO',
+  LOQ: 'LENOVO',
+  THINKBOOK: 'LENOVO',
+  INSPIRON: 'DELL',
+  LATITUDE: 'DELL',
+  VOSTRO: 'DELL',
+  XPS: 'DELL',
+  PRECISION: 'DELL',
+  ALIENWARE: 'DELL',
+  VIVOBOOK: 'ASUS',
+  ZENBOOK: 'ASUS',
+  TUF: 'ASUS',
+  ROG: 'ASUS',
+  EXPERTBOOK: 'ASUS',
+  ZEPHYRUS: 'ASUS',
+  STRIX: 'ASUS',
+  ASPIRE: 'ACER',
+  SWIFT: 'ACER',
+  NITRO: 'ACER',
+  PREDATOR: 'ACER',
+  MACBOOK: 'APPLE',
+  SURFACE: 'MICROSOFT',
+  MODERN: 'MSI',
+  PRESTIGE: 'MSI',
+  STEALTH: 'MSI',
+  RAIDER: 'MSI',
+  KATANA: 'MSI',
+  SWORD: 'MSI',
+  CYBORG: 'MSI',
+  BLADE: 'RAZER',
+  VIPER: 'RAZER'
+};
+
+const BRAND_AND_SERIES = [
+  'ACER', 'ASUS', 'DELL', 'APPLE', 'MACBOOK', 'MICROSOFT', 'SURFACE',
+  'HP', 'LENOVO', 'MSI', 'RAZER', 'CANON', 'SAMSUNG', 'SONY', 'TOSHIBA', 'LG', 'ALIENWARE',
+  'THINKPAD', 'IDEAPAD', 'LEGION', 'YOGA', 'LOQ', 'THINKBOOK',
+  'ELITEBOOK', 'PROBOOK', 'PAVILION', 'ENVY', 'SPECTRE', 'VICTUS', 'OMEN', 'ZBOOK',
+  'INSPIRON', 'LATITUDE', 'VOSTRO', 'XPS', 'PRECISION',
+  'VIVOBOOK', 'ZENBOOK', 'TUF', 'ROG', 'EXPERTBOOK', 'ZEPHYRUS', 'STRIX',
+  'ASPIRE', 'SWIFT', 'NITRO', 'PREDATOR', 'SPIN', 'TRAVELMATE',
+  'MODERN', 'PRESTIGE', 'STEALTH', 'RAIDER', 'KATANA', 'SWORD', 'CYBORG', 'TITAN', 'VECTOR',
+  'BLADE', 'VIPER'
+];
+
+const BRAND_SERIES_PAIRS = {
+  HP: ['ELITEBOOK', 'PROBOOK', 'PAVILION', 'ENVY', 'SPECTRE', 'VICTUS', 'OMEN', 'ZBOOK'],
+  LENOVO: ['THINKPAD', 'IDEAPAD', 'LEGION', 'YOGA', 'LOQ', 'THINKBOOK'],
+  DELL: ['INSPIRON', 'LATITUDE', 'VOSTRO', 'XPS', 'PRECISION', 'ALIENWARE'],
+  ASUS: ['VIVOBOOK', 'ZENBOOK', 'TUF', 'ROG', 'EXPERTBOOK', 'ZEPHYRUS', 'STRIX'],
+  ACER: ['ASPIRE', 'SWIFT', 'NITRO', 'PREDATOR', 'SPIN', 'TRAVELMATE'],
+  APPLE: ['MACBOOK'],
+  MICROSOFT: ['SURFACE'],
+  MSI: ['MODERN', 'PRESTIGE', 'STEALTH', 'RAIDER', 'KATANA', 'SWORD', 'CYBORG', 'TITAN', 'VECTOR'],
+  RAZER: ['BLADE', 'VIPER']
+};
 
 class ModelChecker {
   constructor() {
@@ -227,6 +296,9 @@ class ModelChecker {
         brand = b;
         break;
       }
+    }
+    if (!brand && series) {
+      brand = SERIES_BRAND_MAP[series.toUpperCase()] || '';
     }
 
     // Check if text is solely a series or brand (e.g. "ThinkPad", "Dell Inspiron")
@@ -438,12 +510,29 @@ class ModelChecker {
     return { score, numericMatched, suffixConflict, genConflict };
   }
 
-  splitMultiBrandLine(line) {
-    const brandRegex = /\b(Acer|Asus|Dell|Apple|MacBook|Microsoft|Surface|HP|Lenovo|MSI|Razer|Canon|Alienware|Samsung|Sony|Toshiba|LG)\b/gi;
+  isBrandSeriesPair(brand, series) {
+    const b = String(brand || '').toUpperCase();
+    const s = String(series || '').toUpperCase();
+    return Boolean(BRAND_SERIES_PAIRS[b] && BRAND_SERIES_PAIRS[b].includes(s));
+  }
+
+  isConsecutiveSeriesPair(first, second) {
+    const f = String(first || '').toUpperCase();
+    const s = String(second || '').toUpperCase();
+    if (f === 'ROG' && (s === 'ZEPHYRUS' || s === 'STRIX')) return true;
+    return false;
+  }
+
+  splitMultiModelLine(line) {
+    const pattern = new RegExp(
+      `\\b(${BRAND_AND_SERIES.join('|')})\\b`,
+      'gi'
+    );
+
     const matches = [];
     let match;
-    while ((match = brandRegex.exec(line)) !== null) {
-      matches.push({ index: match.index, brand: match[1] });
+    while ((match = pattern.exec(line)) !== null) {
+      matches.push({ index: match.index, word: match[1] });
     }
 
     if (matches.length <= 1) {
@@ -453,14 +542,25 @@ class ModelChecker {
     const splitIndices = [];
     for (let i = 0; i < matches.length; i++) {
       const curr = matches[i];
-      if (i > 0) {
-        const prev = matches[i - 1];
-        if ((/Apple/i.test(prev.brand) && /MacBook/i.test(curr.brand)) ||
-            (/Microsoft/i.test(prev.brand) && /Surface/i.test(curr.brand))) {
-          continue;
-        }
+      if (i === 0) {
+        splitIndices.push(curr.index);
+        continue;
       }
+      const prev = matches[i - 1];
+      const gap = line.slice(prev.index + prev.word.length, curr.index).trim();
+
+      const isBrandThenSeries = this.isBrandSeriesPair(prev.word, curr.word);
+      const isSeriesPair = this.isConsecutiveSeriesPair(prev.word, curr.word);
+
+      if (gap.length <= 2 && (isBrandThenSeries || isSeriesPair)) {
+        continue;
+      }
+
       splitIndices.push(curr.index);
+    }
+
+    if (splitIndices.length <= 1) {
+      return [line.trim()];
     }
 
     const chunks = [];
@@ -471,6 +571,19 @@ class ModelChecker {
       if (chunk.length > 2) chunks.push(chunk);
     }
     return chunks;
+  }
+
+  isolateMatchingChunk(line, q) {
+    const chunks = this.splitMultiModelLine(line);
+    if (chunks.length <= 1) return line;
+    for (const chunk of chunks) {
+      const chunkKeys = this.extractKeys(chunk);
+      const scoreRes = this.matchScore(q, chunkKeys);
+      if (scoreRes.numericMatched && !scoreRes.genConflict && !scoreRes.suffixConflict) {
+        return chunk;
+      }
+    }
+    return chunks[0];
   }
 
   expandSubModels(entry) {
@@ -563,7 +676,7 @@ class ModelChecker {
       const trimmed = String(item || '').trim().replace(/\s+/g, ' ');
       if (!trimmed || /^(Acer\s+Asus\s+Dell|Brand|Model|Laptop|Catalog)/i.test(trimmed)) continue;
 
-      const brandChunks = this.splitMultiBrandLine(trimmed);
+      const brandChunks = this.splitMultiModelLine(trimmed);
       for (const chunk of brandChunks) {
         const semiParts = chunk.split(';');
         let parentBrand = '';
@@ -653,10 +766,11 @@ class ModelChecker {
     // Exact match found:
     // "eita shodu amake exact model ta dekhabo je available ase kina . jodi thake thaole bolbe and show korbe je ase extra ar kiso na"
     if (exactMatchLine) {
+      const cleanMatched = this.isolateMatchingChunk(exactMatchLine, q);
       return {
         status: 'AVAILABLE',
         isExactMatch: true,
-        matchedModel: exactMatchLine,
+        matchedModel: cleanMatched,
         variants: [], // Extra nothing!
         reasoning: `Model "${query.trim()}" is available in stock.`
       };
@@ -664,11 +778,12 @@ class ModelChecker {
 
     // 2. Partial Conflict: user searched specific gen or suffix (e.g. 840 G2) that doesn't exist, but same model exists (840 G3, G4...)
     if (partialConflictMatches.length > 0) {
+      const cleanMatched = this.isolateMatchingChunk(partialConflictMatches[0], q);
       return {
         status: 'PARTIAL',
         isExactMatch: false,
-        matchedModel: partialConflictMatches[0],
-        variants: partialConflictMatches,
+        matchedModel: cleanMatched,
+        variants: partialConflictMatches.map(v => this.isolateMatchingChunk(v, q)),
         reasoning: `The exact model "${query.trim()}" was not found, but other variants of this model are in stock:`
       };
     }
@@ -718,10 +833,30 @@ class ModelChecker {
 
     if (sameModelVariants.length > 0) {
       if (sameModelVariants.length === 1) {
+        const cleanMatched = this.isolateMatchingChunk(sameModelVariants[0], q);
         return {
           status: 'AVAILABLE',
           isExactMatch: true,
-          matchedModel: sameModelVariants[0],
+          matchedModel: cleanMatched,
+          variants: [],
+          reasoning: `Model "${query.trim()}" is available in stock.`
+        };
+      }
+      const uniqueIsolated = [];
+      const seenIso = new Set();
+      for (const v of sameModelVariants) {
+        const iso = this.isolateMatchingChunk(v, q);
+        const k = this.compact(iso);
+        if (k.length >= 2 && !seenIso.has(k)) {
+          seenIso.add(k);
+          uniqueIsolated.push(iso);
+        }
+      }
+      if (uniqueIsolated.length === 1) {
+        return {
+          status: 'AVAILABLE',
+          isExactMatch: true,
+          matchedModel: uniqueIsolated[0],
           variants: [],
           reasoning: `Model "${query.trim()}" is available in stock.`
         };
@@ -730,7 +865,7 @@ class ModelChecker {
         status: 'VARIANTS',
         isExactMatch: false,
         matchedModel: `${query.trim()} Variants`,
-        variants: sameModelVariants,
+        variants: uniqueIsolated,
         reasoning: `Multiple variants found for "${query.trim()}". Available options:`
       };
     }
@@ -906,11 +1041,20 @@ class ModelChecker {
         const content = await page.getTextContent();
         let pageText = '';
         let lastY = null;
+        let lastX = null;
+        let lastWidth = 0;
 
         for (const item of content.items) {
-          if (!item.str) continue;
+          if (!item.str || !item.str.trim()) continue;
+          const x = item.transform[4];
+          const y = item.transform[5];
+          const width = item.width || 0;
+
           // When vertical coordinate changes by more than 5pt, emit a newline
-          if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+          if (lastY !== null && Math.abs(y - lastY) > 5) {
+            pageText += '\n';
+          } else if (lastX !== null && (x < lastX || (x - (lastX + lastWidth)) > 12)) {
+            // Horizontal column jump on the same row! Emit a newline so table columns never merge!
             pageText += '\n';
           } else if (pageText && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
             pageText += ' ';
@@ -919,7 +1063,9 @@ class ModelChecker {
           if (item.hasEOL) {
             pageText += '\n';
           }
-          lastY = item.transform[5];
+          lastY = y;
+          lastX = x;
+          lastWidth = width;
         }
 
         fullText += pageText + '\n';
