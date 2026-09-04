@@ -25,6 +25,7 @@ Task:
 
 TEMPERATURE = 0.2
 MAX_OUTPUT_TOKENS = 120
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
 
 def normalize_model(text: str) -> str:
@@ -87,7 +88,7 @@ def ai_check():
     try:
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=user_input,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,

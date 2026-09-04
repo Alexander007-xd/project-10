@@ -33,7 +33,8 @@ Open `http://localhost:8000/app-package/index.html`.
 2. Use `pip install -r requirements.txt` as the build command.
 3. Use `python server.py` as the start command.
 4. Add `GOOGLE_API_KEY` in Render Environment Variables.
-5. Put the Render service URL in `app-package/config.js`.
-6. Enable GitHub Pages from the repository's `main` branch and open `/app-package/index.html`.
+5. Add `GEMINI_MODEL` with value `gemini-3.6-flash` in Render Environment Variables.
+6. Put the Render service URL in `app-package/config.js`.
+7. Enable GitHub Pages from the repository's `main` branch and open `/app-package/index.html`.
 
 Never commit a real API key to the repository.
