@@ -337,8 +337,13 @@ class ModelChecker {
       const matchedModels = Array.isArray(data.matchedModels)
         ? data.matchedModels
         : (data.matchedModel ? [data.matchedModel] : []);
-      const statusText = data.available ? '✅ Available' : '❌ Not Found';
-      const statusClass = data.available ? 'result available' : 'result not-found';
+      const statusText = {
+        available: '✅ Available',
+        unavailable: '❌ Not in catalog',
+        partial: '◐ Partial match',
+        uncertain: '？ Needs confirmation'
+      }[data.status] || (data.available ? '✅ Available' : '❌ Not Found');
+      const statusClass = data.status === 'available' || data.available ? 'result available' : 'result not-found';
       const options = matchedModels.length
         ? this.renderCatalogMatches(matchedModels)
         : '';
@@ -351,6 +356,7 @@ class ModelChecker {
         <div class="match-info">${this.escapeHtml(data.reasoning || 'AI assistant response')}</div>
         ${options}
         <div class="match-info">${data.ambiguous ? 'Please enter the exact model name for a precise result.' : `Matched model: ${this.escapeHtml(data.matchedModel || 'None')}`}</div>
+        ${data.question ? `<div class="match-info"><strong>Question:</strong> ${this.escapeHtml(data.question)}</div>` : ''}
         <div class="match-info">Confidence: ${data.confidence || 0}%</div>
         ${serviceNotice}
       `;
@@ -404,12 +410,19 @@ class ModelChecker {
       if (!response.ok) throw new Error(data.error || 'AI image lookup failed');
 
       const matches = Array.isArray(data.matchedModels) ? data.matchedModels : [];
-      this.aiResult.className = data.available ? 'result available' : 'result not-found';
+      const imageStatusText = {
+        available: '✅ Available in your PDF',
+        unavailable: '❌ Not in your PDF',
+        partial: '◐ Partial catalog match',
+        uncertain: '？ Model needs confirmation'
+      }[data.status] || (data.available ? '✅ Available in your PDF' : '❌ Not Found in your PDF');
+      this.aiResult.className = data.status === 'available' || data.available ? 'result available' : 'result not-found';
       this.aiResult.innerHTML = `
-        <div>${data.available ? '✅ Available in your PDF' : '❌ Not Found in your PDF'}</div>
+        <div>${imageStatusText}</div>
         <div class="match-info"><strong>AI identified:</strong> ${this.escapeHtml(data.identifiedModel || 'Model not clear')}</div>
         ${matches.length ? this.renderCatalogMatches(matches, 'PDF catalog matches') : ''}
         <div class="match-info">${this.escapeHtml(data.reasoning || 'The assistant could not identify a confident model.')}</div>
+        ${data.question ? `<div class="match-info"><strong>Question:</strong> ${this.escapeHtml(data.question)}</div>` : ''}
         <div class="match-info">Confidence: ${data.confidence || 0}%</div>
       `;
       this.aiStatus.textContent = data.available ? 'Image match ready' : 'Image checked';

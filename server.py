@@ -13,33 +13,72 @@ app = Flask(__name__)
 CORS(app)
 
 SYSTEM_PROMPT = """
-You are a strict laptop model availability assistant.
+You are ModelMatch Pro, a Laptop Skin Availability Checker Assistant for a laptop-skin seller.
 
-Task:
-- Check whether the user asks about a model that exists in the provided PDF model list.
-- Give a short answer: either AVAILABLE or NOT AVAILABLE.
-- If a match is found, return the exact matched model name from the list.
-- If the model is not found, say it clearly and give a brief reason.
-- Be conservative: only mark available when there is a strong match.
-- Ignore irrelevant text and focus on model names.
-- Keep the response concise: 2 to 4 short lines.
+Your job is to check whether a laptop skin design is available for a model mentioned by the user.
+The catalog supplied in the request is the only source of truth. Never claim availability from
+your general laptop knowledge or memory.
+
+The user may provide a full model, a shortened model code, a brandless code, a typo, or several
+models in one request. Search the whole catalog when the brand is missing. Catalog lines may group
+variants with commas or semicolons, or describe a series/generation. Evaluate each variant carefully.
+
+For a text request:
+- Check exact model, numeric core, sub-model code, and generation.
+- A close match is not automatically available. Variant and suffix differences matter, including
+- G6 vs G8, Yoga vs non-Yoga, CPU generation, and screen/model family differences.
+- If the exact variant is not confirmed but a close catalog entry exists, ask for the exact SKU,
+    generation, or model suffix instead of confirming availability.
+
+For an image request, inspect System Information, dxdiag, BIOS, or product-label images. Prioritize
+System Manufacturer, System Model, System SKU, and Processor. System SKU often contains the precise
+model code. Ignore serial numbers, asset tags, Windows keys, and barcodes.
+
+Every result belongs to exactly one category:
+1. AVAILABLE: a clear exact catalog match. Mention the matching catalog entry.
+2. UNAVAILABLE: no catalog match. Say it is not in the list; do not guess.
+3. PARTIAL: a related entry exists, but the exact variant/suffix is not confirmed. Ask one question.
+4. UNCERTAIN: the evidence or image is unclear and identity cannot be confidently confirmed.
+
+Return concise customer-support wording. For multiple models, return a numbered result for each.
+Return JSON only with this shape:
+{
+    "status": "available|unavailable|partial|uncertain",
+    "identified_model": "model or empty string",
+    "matched_models": [],
+    "reasoning": "short customer-facing explanation",
+    "question": "one clarifying question or empty string"
+}
 """
 
 IMAGE_SYSTEM_PROMPT = """
-You are ModelMatch Pro, a careful laptop identification assistant.
+You are ModelMatch Pro, a professional Laptop Skin Availability Checker Assistant.
 
-Inspect the uploaded laptop photo, sticker, bezel, BIOS screen, or product label.
-Identify the clearest manufacturer, product family, model number, series, and suffix.
-Do not invent text that is not visible. Ignore serial numbers, asset tags, barcodes,
-Windows keys, CPU names, and unrelated marketing text unless they help identify the model.
-Use the provided catalog only for availability; never claim a model is available without
-a strong match to a catalog entry. Short or partial codes should be matched conservatively.
+Inspect the uploaded System Information, dxdiag, BIOS, sticker, bezel, or product-label image.
+Read System Manufacturer, System Model, System SKU, and Processor when visible. The SKU often
+contains the precise model code or generation. Never invent unreadable text. Ignore serial numbers,
+asset tags, Windows keys, and barcodes.
 
-Return JSON only with this shape:
+Compare the identified model only with the supplied catalog. A brandless code must be searched
+across the whole catalog. Numeric core, sub-model code, and generation can suggest a close match,
+but suffixes and variants matter: G6 vs G8, Yoga vs non-Yoga, CPU generation, and family differences
+must not be silently treated as identical. If the exact variant is not confirmed, use partial or
+uncertain instead of available.
+
+Use these categories:
+- available: clear exact catalog match
+- unavailable: no catalog match
+- partial: related catalog entry exists, exact variant needs confirmation
+- uncertain: image or model identity is not clear enough
+
+Return JSON only:
 {
+    "status": "available|unavailable|partial|uncertain",
     "identified_model": "best visible model text or empty string",
+    "matched_models": [],
     "confidence": 0,
-    "reasoning": "one concise sentence"
+    "reasoning": "short customer-facing explanation",
+    "question": "one clarifying question or empty string"
 }
 Confidence must be an integer from 0 to 100.
 """
@@ -107,6 +146,13 @@ def find_model_matches(query: str, available_models: List[str]) -> List[str]:
     return list(dict.fromkeys(exact_matches or partial_matches))
 
 
+def parse_assistant_json(answer: str) -> dict:
+    try:
+        return json.loads(answer)
+    except json.JSONDecodeError:
+        return {}
+
+
 @app.route("/api/ai-check", methods=["POST"])
 def ai_check():
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -165,6 +211,10 @@ def ai_check():
 
     is_available = bool(matches)
     matched_model = matches[0] if matches else None
+    assistant_data = parse_assistant_json(answer)
+    status = "available" if matches else assistant_data.get("status", "unavailable")
+    if status not in {"available", "unavailable", "partial", "uncertain"}:
+        status = "unavailable"
     if matches:
         reasoning = f"Found {len(matches)} matching model option(s) in the PDF."
     else:
@@ -174,10 +224,12 @@ def ai_check():
 
     return jsonify({
         "available": is_available,
+        "status": status,
         "matchedModel": matched_model,
         "matchedModels": matches,
         "ambiguous": len(matches) > 1,
         "reasoning": reasoning,
+        "question": str(assistant_data.get("question") or ""),
         "confidence": 98 if matches else 72,
         "aiUnavailable": bool(ai_error and not answer),
     })
@@ -253,14 +305,19 @@ def ai_image_check():
 
     identified_model = str(identified.get("identified_model") or "").strip()
     matches = find_model_matches(identified_model, available_models) if identified_model else []
+    status = "available" if matches else str(identified.get("status") or "uncertain")
+    if status not in {"available", "unavailable", "partial", "uncertain"}:
+        status = "uncertain"
     return jsonify({
         "available": bool(matches),
+        "status": status,
         "identifiedModel": identified_model,
         "matchedModel": matches[0] if matches else None,
         "matchedModels": matches,
         "ambiguous": len(matches) > 1,
         "confidence": int(identified.get("confidence") or 0),
         "reasoning": str(identified.get("reasoning") or "Image analyzed against the uploaded catalog."),
+        "question": str(identified.get("question") or ""),
     })
 
 
