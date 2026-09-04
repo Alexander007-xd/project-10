@@ -41,10 +41,10 @@ variants with commas or semicolons, or describe a series/generation. Evaluate ea
 
 For a text request:
 - Check exact model, numeric core, sub-model code, and generation.
-- A close match is not automatically available. Variant and suffix differences matter, including
-- G6 vs G8, Yoga vs non-Yoga, CPU generation, and screen/model family differences.
-- If the exact variant is not confirmed but a close catalog entry exists, ask for the exact SKU,
-    generation, or model suffix instead of confirming availability.
+- Treat a suffix-only difference as available when the brand, series, base model code, and generation
+  agree. Those suffixes commonly describe sales, region, memory, storage, or color configurations.
+- Do not treat a different generation (G6 vs G8), family (Yoga vs non-Yoga), or base model code as
+  the same laptop. Those must remain partial matches.
 
 For an image request, inspect System Information, dxdiag, BIOS, or product-label images. Prioritize
 System Manufacturer, System Model, System SKU, and Processor. System SKU often contains the precise
@@ -77,9 +77,9 @@ asset tags, Windows keys, and barcodes.
 
 Compare the identified model only with the supplied catalog. A brandless code must be searched
 across the whole catalog. Numeric core, sub-model code, and generation can suggest a close match,
-but suffixes and variants matter: G6 vs G8, Yoga vs non-Yoga, CPU generation, and family differences
-must not be silently treated as identical. If the exact variant is not confirmed, use partial or
-uncertain instead of available.
+but a suffix-only difference may be treated as available when brand, series, base model code, and
+generation agree. G6 vs G8, Yoga vs non-Yoga, and family differences must not be silently treated
+as identical.
 
 Use these categories:
 - available: clear exact catalog match
@@ -282,7 +282,7 @@ def isolate_matching_chunk(line: str, q: dict) -> str:
     for chunk in chunks:
         chunk_keys = extract_keys(chunk)
         res = match_score(q, chunk_keys)
-        if res["numeric_matched"] and not res["gen_conflict"] and not res["suffix_conflict"]:
+        if res["numeric_matched"] and not res["gen_conflict"]:
             return chunk
     return chunks[0]
 
@@ -671,6 +671,7 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
     # 1. Exact match check
     exact_match_line = None
     partial_conflict_matches = []
+    suffix_equivalent_matches = []
 
     for line in catalog:
         c = extract_keys(line)
@@ -682,7 +683,10 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
         res = match_score(q, c)
         if res["score"] > 0:
             if (res["gen_conflict"] or res["suffix_conflict"]) and res["numeric_matched"]:
-                partial_conflict_matches.append(line)
+                if res["suffix_conflict"] and not res["gen_conflict"]:
+                    suffix_equivalent_matches.append(line)
+                else:
+                    partial_conflict_matches.append(line)
             elif res["numeric_matched"] and q["has_exact_code"] and not res["gen_conflict"] and not res["suffix_conflict"]:
                 exact_match_line = line
                 break
@@ -713,11 +717,26 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
             "confidence": 98,
         }
 
-    # 2. Partial Conflict:
+    # 2. The base model matches and only the sales/configuration suffix differs.
+    # Generation and series conflicts were already kept out of this group above.
+    if suffix_equivalent_matches:
+        clean_matched = isolate_matching_chunk(suffix_equivalent_matches[0], q)
+        return {
+            "status": "available",
+            "match_type": "suffix_equivalent",
+            "is_exact_match": True,
+            "best_match": clean_matched,
+            "matched_models": [],
+            "reasoning": f"Model '{query.strip()}' matches the available base model '{clean_matched}'; the suffix is a compatible configuration variant.",
+            "confidence": 95,
+        }
+
+    # 3. Partial conflict, such as a different generation.
     if partial_conflict_matches:
         clean_matched = isolate_matching_chunk(partial_conflict_matches[0], q)
         return {
             "status": "partial",
+            "match_type": "different_variant",
             "is_exact_match": False,
             "best_match": clean_matched,
             "matched_models": [isolate_matching_chunk(m, q) for m in partial_conflict_matches],
@@ -786,6 +805,7 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
             }
         return {
             "status": "partial",
+            "match_type": "multiple_variants",
             "is_exact_match": False,
             "best_match": f"{query.strip()} Variants",
             "matched_models": unique_isolated,
@@ -795,6 +815,7 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
 
     return {
         "status": "unavailable",
+        "match_type": "none",
         "is_exact_match": False,
         "best_match": "",
         "matched_models": [],
@@ -860,6 +881,7 @@ def ai_check():
             "available": classification["status"] == "available",
             "matchedModel": best_match or None,
             "matchedModels": matches,
+            "matchType": classification.get("match_type", "exact" if classification["status"] == "available" else "none"),
             "ambiguous": len(matches) > 1,
             "reasoning": classification["reasoning"],
             "confidence": classification["confidence"],
@@ -927,6 +949,7 @@ def ai_check():
         "status": status,
         "matchedModel": matched_model,
         "matchedModels": matches,
+        "matchType": classification.get("match_type", "exact" if is_available else "none"),
         "ambiguous": len(matches) > 1,
         "reasoning": reasoning,
         "question": str(assistant_data.get("question") or ""),
@@ -1024,6 +1047,7 @@ def ai_image_check():
         "identifiedModel": identified_model,
         "matchedModel": matches[0] if matches else None,
         "matchedModels": matches,
+        "matchType": classification.get("match_type", "exact" if status == "available" else "none"),
         "ambiguous": len(matches) > 1,
         "confidence": int(identified.get("confidence") or 0),
         "reasoning": str(identified.get("reasoning") or "Image analyzed against the uploaded catalog."),

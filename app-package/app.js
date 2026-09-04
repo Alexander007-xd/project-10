@@ -609,7 +609,7 @@ class ModelChecker {
     for (const chunk of chunks) {
       const chunkKeys = this.extractKeys(chunk);
       const scoreRes = this.matchScore(q, chunkKeys);
-      if (scoreRes.numericMatched && !scoreRes.genConflict && !scoreRes.suffixConflict) {
+      if (scoreRes.numericMatched && !scoreRes.genConflict) {
         return chunk;
       }
     }
@@ -846,6 +846,7 @@ class ModelChecker {
     // 1. Check for exact match first
     let exactMatchLine = null;
     const partialConflictMatches = [];
+    const suffixEquivalentMatches = [];
 
     for (const line of catalog) {
       const c = this.extractKeys(line);
@@ -858,7 +859,11 @@ class ModelChecker {
 
       if (res.score > 0) {
         if ((res.genConflict || res.suffixConflict) && res.numericMatched) {
-          partialConflictMatches.push(line);
+          if (res.suffixConflict && !res.genConflict) {
+            suffixEquivalentMatches.push(line);
+          } else {
+            partialConflictMatches.push(line);
+          }
         } else if (res.numericMatched && q.hasExactCode && !res.genConflict && !res.suffixConflict) {
           if (this.isSeriesCompatible(q.series, c.series)) {
             exactMatchLine = line;
@@ -895,11 +900,26 @@ class ModelChecker {
       };
     }
 
-    // 2. Partial Conflict: user searched specific gen or suffix (e.g. 840 G2) that doesn't exist, but same model exists (840 G3, G4...)
+    // 2. Same base model with a sales / regional / configuration suffix.
+    // A generation or series conflict is handled separately as a partial match.
+    if (suffixEquivalentMatches.length > 0) {
+      const cleanMatched = this.isolateMatchingChunk(suffixEquivalentMatches[0], q);
+      return {
+        status: 'AVAILABLE',
+        matchKind: 'suffix_equivalent',
+        isExactMatch: true,
+        matchedModel: cleanMatched,
+        variants: [],
+        reasoning: `Model "${query.trim()}" matches the available base model "${cleanMatched}"; the suffix is a compatible configuration variant.`
+      };
+    }
+
+    // 3. Partial Conflict: user searched a different generation or a model variation.
     if (partialConflictMatches.length > 0) {
       const cleanMatched = this.isolateMatchingChunk(partialConflictMatches[0], q);
       return {
         status: 'PARTIAL',
+        matchKind: 'different_variant',
         isExactMatch: false,
         matchedModel: cleanMatched,
         variants: partialConflictMatches.map(v => this.isolateMatchingChunk(v, q)),
@@ -982,6 +1002,7 @@ class ModelChecker {
       }
       return {
         status: 'VARIANTS',
+        matchKind: 'multiple_variants',
         isExactMatch: false,
         matchedModel: `${query.trim()} Variants`,
         variants: uniqueIsolated,
@@ -992,6 +1013,7 @@ class ModelChecker {
     // 4. Unavailable
     return {
       status: 'UNAVAILABLE',
+      matchKind: 'none',
       isExactMatch: false,
       matchedModel: '',
       variants: [],
@@ -1314,8 +1336,9 @@ class ModelChecker {
       `;
     } else if (result.status === 'PARTIAL') {
       this.searchResult.className = 'result partial';
+      const suffixEquivalent = result.matchKind === 'suffix_equivalent';
       this.searchResult.innerHTML = `
-        <div class="result-badge">◐ DIFFERENT VARIANT IN STOCK</div>
+        <div class="result-badge">${suffixEquivalent ? '✅ AVAILABLE — SAME BASE MODEL' : '◐ DIFFERENT VARIANT IN STOCK'}</div>
         <div class="confirmed-model-card">
           <div class="confirmed-model-name">${this.escapeHtml(result.matchedModel)}</div>
           <div class="confirmed-model-note">${this.escapeHtml(result.reasoning)}</div>
@@ -1407,6 +1430,7 @@ class ModelChecker {
         uncertain: 'result uncertain',
         unavailable: 'result unavailable'
       }[data.status] || (data.available ? 'result available' : 'result unavailable');
+      const suffixEquivalent = data.matchType === 'suffix_equivalent';
 
       // If exact match or single match, DO NOT render catalog matches list: "extra ar kiso na"
       const isSingleExact = (data.status === 'available' || data.available) && uniqueMatches.length <= 1;
@@ -1430,7 +1454,7 @@ class ModelChecker {
 
       this.aiResult.className = statusClass;
       this.aiResult.innerHTML = `
-        <div class="result-badge">${statusText}</div>
+        <div class="result-badge">${suffixEquivalent ? '✅ Available — Same Base Model' : statusText}</div>
         ${confirmedModelHtml}
         ${options}
         ${data.ambiguous && uniqueMatches.length > 1 ? '<div class="match-info">Please select your specific variant from the list above.</div>' : ''}
