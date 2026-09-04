@@ -5,11 +5,13 @@ import json
 from typing import List
 
 from flask import Flask, jsonify, request
+from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from google import genai
 from google.genai import types
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024
 CORS(
     app,
     resources={r"/api/*": {"origins": [
@@ -20,6 +22,11 @@ CORS(
     methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def request_too_large(_error):
+    return jsonify({"error": "Upload is too large. Please use a file smaller than 12 MB."}), 413
 
 SYSTEM_PROMPT = """
 You are ModelMatch Pro, a Laptop Skin Availability Checker Assistant for a laptop-skin seller.
@@ -94,6 +101,8 @@ Confidence must be an integer from 0 to 100.
 
 TEMPERATURE = 0.2
 MAX_OUTPUT_TOKENS = 512
+MAX_CATALOG_ITEMS = 1_000
+MAX_CATALOG_ITEM_LENGTH = 500
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", GEMINI_MODEL)
 
@@ -223,7 +232,16 @@ def is_brand_series_pair(brand: str, series: str) -> bool:
 def is_consecutive_series_pair(first: str, second: str) -> bool:
     f = first.upper()
     s = second.upper()
-    return f == "ROG" and s in ("ZEPHYRUS", "STRIX")
+    return (f == "ROG" and s in ("ZEPHYRUS", "STRIX")) or (f == "THINKPAD" and s == "YOGA")
+
+
+def is_series_compatible(query_series: str, catalog_series: str) -> bool:
+    """Allow a broad query to match its children, never a specific query to match a parent."""
+    if not query_series or not catalog_series:
+        return True
+    query_words = set(query_series.upper().split())
+    catalog_words = set(catalog_series.upper().split())
+    return query_words.issubset(catalog_words)
 
 
 def split_multi_model_line(line: str) -> list:
@@ -587,7 +605,7 @@ def match_score(q: dict, c: dict) -> dict:
     if q["series"] and c["series"]:
         if q["series"] == c["series"]:
             score += 30
-        elif q["series"] in c["series"] or c["series"] in q["series"]:
+        elif is_series_compatible(q["series"], c["series"]):
             score += 20
         else:
             return {"score": -100, "numeric_matched": False, "suffix_conflict": False, "gen_conflict": False}
@@ -658,7 +676,7 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
         c = extract_keys(line)
         if q["brand"] and c["brand"] and q["brand"] != c["brand"]:
             continue
-        if q["series"] and c["series"] and q["series"] != c["series"] and q["series"] not in c["series"] and c["series"] not in q["series"]:
+        if not is_series_compatible(q["series"], c["series"]):
             continue
 
         res = match_score(q, c)
@@ -666,16 +684,15 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
             if (res["gen_conflict"] or res["suffix_conflict"]) and res["numeric_matched"]:
                 partial_conflict_matches.append(line)
             elif res["numeric_matched"] and q["has_exact_code"] and not res["gen_conflict"] and not res["suffix_conflict"]:
-                if not q["series"] or c["series"] == q["series"] or q["series"] in c["series"]:
-                    exact_match_line = line
-                    break
+                exact_match_line = line
+                break
 
     if not exact_match_line and q["has_exact_code"]:
         for line in catalog:
             c = extract_keys(line)
             if q["brand"] and c["brand"] and q["brand"] != c["brand"]:
                 continue
-            if q["series"] and c["series"] and q["series"] != c["series"]:
+            if not is_series_compatible(q["series"], c["series"]):
                 continue
             all_codes_match = q["codes"] and all(code in c["comp"] for code in q["codes"])
             if all_codes_match:
@@ -717,7 +734,7 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
         if q["brand"] and c["brand"] and q["brand"] != c["brand"]:
             continue
         if q["series"]:
-            series_match = bool(c["series"]) and (c["series"] == q["series"] or q["series"] in c["series"] or c["series"] in q["series"])
+            series_match = bool(c["series"]) and is_series_compatible(q["series"], c["series"])
             if not series_match:
                 continue
 
@@ -793,6 +810,17 @@ def find_model_matches(query: str, available_models: List[str]) -> List[str]:
     return [res["best_match"]] if res["best_match"] else []
 
 
+def validate_catalog(raw_catalog) -> tuple[list, str]:
+    """Validate browser-supplied catalog data before processing or sending it to AI."""
+    if not isinstance(raw_catalog, list):
+        return [], "Catalog model data must be a list."
+    if len(raw_catalog) > MAX_CATALOG_ITEMS:
+        return [], f"Catalog is too large. Please use {MAX_CATALOG_ITEMS} models or fewer."
+    if any(not isinstance(item, str) or len(item) > MAX_CATALOG_ITEM_LENGTH for item in raw_catalog):
+        return [], "Catalog contains an invalid model entry."
+    return clean_catalog_lines(raw_catalog), ""
+
+
 def parse_assistant_json(answer: str) -> dict:
     text = answer.strip()
     # Strip markdown code fences that Gemini sometimes wraps around JSON
@@ -800,7 +828,8 @@ def parse_assistant_json(answer: str) -> dict:
     if fence_match:
         text = fence_match.group(1).strip()
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else {}
     except json.JSONDecodeError:
         return {}
 
@@ -811,10 +840,14 @@ def ai_check():
     payload = request.get_json(silent=True) or {}
     prompt = (payload.get("prompt") or "").strip()
     raw_available = payload.get("availableModels") or []
-    available_models = clean_catalog_lines(raw_available)
+    available_models, catalog_error = validate_catalog(raw_available)
 
     if not prompt:
         return jsonify({"error": "Prompt is required."}), 400
+    if len(prompt) > 500:
+        return jsonify({"error": "Please keep the model question within 500 characters."}), 400
+    if catalog_error:
+        return jsonify({"error": catalog_error}), 400
 
     classification = classify_match(prompt, available_models)
     matches = classification["matched_models"]
@@ -833,14 +866,13 @@ def ai_check():
             "aiUnavailable": True,
         })
 
-    model_list = ", ".join(available_models) if available_models else "No models provided."
     matched_list = ", ".join(matches) if matches else "None"
     best_catalog = best_match or "None"
     user_input = (
         f"User question: {prompt}\n"
-        f"Available models from PDF: {model_list}\n"
         f"Deterministic pipeline result: Category = {classification['status'].upper()}, Best match = {best_catalog}, Matches = {matched_list}\n"
-        "Confirm if the requested model is available or partial based on the catalog."
+        "The deterministic result above was calculated from the complete uploaded catalog. "
+        "Write a concise customer-facing explanation that agrees with it."
     )
 
     answer = ""
@@ -873,11 +905,9 @@ def ai_check():
     matched_model = best_match or (matches[0] if matches else None)
     assistant_data = parse_assistant_json(answer)
 
-    ai_status = assistant_data.get("status", "")
-    if ai_status in {"available", "unavailable", "partial", "uncertain"}:
-        status = ai_status
-    else:
-        status = classification["status"]
+    # The catalog matcher is the source of truth. Gemini is used only to identify
+    # the model and explain the result, never to overturn a catalog decision.
+    status = classification["status"]
 
     ai_reasoning = str(assistant_data.get("reasoning") or "").strip()
     if ai_reasoning:
@@ -900,7 +930,7 @@ def ai_check():
         "ambiguous": len(matches) > 1,
         "reasoning": reasoning,
         "question": str(assistant_data.get("question") or ""),
-        "confidence": int(assistant_data.get("confidence", 98 if is_available else 72)),
+        "confidence": classification["confidence"],
         "aiUnavailable": bool(ai_error and not answer),
     })
 
@@ -917,13 +947,17 @@ def ai_image_check():
     except json.JSONDecodeError:
         return jsonify({"error": "Invalid catalog model data."}), 400
 
-    if not isinstance(raw_available, list):
-        return jsonify({"error": "Catalog model data must be a list."}), 400
-
-    available_models = clean_catalog_lines(raw_available)
+    available_models, catalog_error = validate_catalog(raw_available)
+    if catalog_error:
+        return jsonify({"error": catalog_error}), 400
 
     if not api_key:
         return jsonify({"error": "Missing GOOGLE_API_KEY on the AI backend."}), 500
+
+    allowed_mime_types = {"image/jpeg", "image/png", "image/webp"}
+    mime_type = (image.mimetype or "").lower()
+    if mime_type not in allowed_mime_types:
+        return jsonify({"error": "Use a JPG, PNG, or WebP image."}), 400
 
     image_bytes = image.read()
     if not image_bytes:
@@ -931,11 +965,9 @@ def ai_image_check():
     if len(image_bytes) > 10 * 1024 * 1024:
         return jsonify({"error": "Please upload an image smaller than 10 MB."}), 400
 
-    mime_type = image.mimetype or "image/jpeg"
-    catalog = ", ".join(str(model) for model in available_models) or "No models provided."
     vision_prompt = (
-        "Identify the laptop model in this image. Then compare it with this PDF catalog.\n"
-        f"PDF catalog models: {catalog}\n"
+        "Identify the laptop model in this image as precisely as the visible evidence allows. "
+        "Do not claim catalog availability; the server will compare your identified model against the complete catalog. "
         "Return only the requested JSON object."
     )
 
@@ -971,17 +1003,23 @@ def ai_image_check():
         return jsonify({"error": f"AI image request failed: {ai_error or 'No response returned.'}"}), 502
 
     try:
-        identified = json.loads(answer)
+        identified = parse_assistant_json(answer)
     except json.JSONDecodeError:
         identified = {"identified_model": answer, "confidence": 35, "reasoning": "The image response was not structured."}
 
+    if not identified:
+        identified = {"identified_model": "", "confidence": 0, "reasoning": "The model could not be read clearly from the image."}
+
     identified_model = str(identified.get("identified_model") or "").strip()
+    classification = classify_match(identified_model, available_models) if identified_model else None
     matches = find_model_matches(identified_model, available_models) if identified_model else []
-    status = "available" if matches else str(identified.get("status") or "uncertain")
-    if status not in {"available", "unavailable", "partial", "uncertain"}:
+    status = classification["status"] if classification else "uncertain"
+    # Without a clear model identity, keep the image result uncertain even if the
+    # model guessed by Gemini happened to resemble a catalog entry.
+    if not identified_model:
         status = "uncertain"
     return jsonify({
-        "available": bool(matches),
+        "available": status == "available",
         "status": status,
         "identifiedModel": identified_model,
         "matchedModel": matches[0] if matches else None,

@@ -1,5 +1,8 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const AI_API_BASE_URL = window.MODEL_MATCH_API_URL || 'http://localhost:5000';
+const MAX_PDF_SIZE = 20 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const REQUEST_TIMEOUT_MS = 45000;
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -195,6 +198,8 @@ class ModelChecker {
       if (event.key === 'Enter') this.handleSearch();
     });
     this.aiPromptInput.addEventListener('input', () => this.updateAiButtons());
+    this.searchResult.addEventListener('click', (event) => this.handleCatalogOptionClick(event));
+    this.aiResult.addEventListener('click', (event) => this.handleCatalogOptionClick(event));
 
     this.manualTabBtn.addEventListener('click', () => this.showTab('manual'));
     this.aiTabBtn.addEventListener('click', () => this.showTab('ai'));
@@ -214,8 +219,23 @@ class ModelChecker {
   }
 
   updateAiButtons() {
-    this.aiTextBtn.disabled = !this.pdfLoaded;
+    this.aiTextBtn.disabled = !this.pdfLoaded || !this.aiPromptInput.value.trim();
     this.aiImageBtn.disabled = !this.pdfLoaded;
+  }
+
+  handleCatalogOptionClick(event) {
+    const option = event.target.closest('[data-catalog-model]');
+    if (option) this.selectCatalogOption(option.dataset.catalogModel);
+  }
+
+  async fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   showTab(tab) {
@@ -443,7 +463,7 @@ class ModelChecker {
     if (q.series && c.series) {
       if (q.series === c.series) {
         score += 30;
-      } else if (c.series.includes(q.series) || q.series.includes(c.series)) {
+      } else if (this.isSeriesCompatible(q.series, c.series)) {
         score += 20;
       } else {
         return { score: -100, numericMatched: false, suffixConflict: false, genConflict: false };
@@ -520,7 +540,17 @@ class ModelChecker {
     const f = String(first || '').toUpperCase();
     const s = String(second || '').toUpperCase();
     if (f === 'ROG' && (s === 'ZEPHYRUS' || s === 'STRIX')) return true;
+    if (f === 'THINKPAD' && s === 'YOGA') return true;
     return false;
+  }
+
+  isSeriesCompatible(querySeries, catalogSeries) {
+    // A broad request ("ThinkPad") can show its sub-series, but a specific
+    // request ("ThinkPad X1 Yoga") must never fall back to every ThinkPad.
+    if (!querySeries || !catalogSeries) return true;
+    const queryWords = new Set(String(querySeries).toUpperCase().split(/\s+/));
+    const catalogWords = new Set(String(catalogSeries).toUpperCase().split(/\s+/));
+    return Array.from(queryWords).every(word => catalogWords.has(word));
   }
 
   splitMultiModelLine(line) {
@@ -822,7 +852,7 @@ class ModelChecker {
 
       // Brand and series consistency
       if (q.brand && c.brand && q.brand !== c.brand) continue;
-      if (q.series && c.series && q.series !== c.series && !c.series.includes(q.series) && !q.series.includes(c.series)) continue;
+      if (!this.isSeriesCompatible(q.series, c.series)) continue;
 
       const res = this.matchScore(q, c);
 
@@ -830,7 +860,7 @@ class ModelChecker {
         if ((res.genConflict || res.suffixConflict) && res.numericMatched) {
           partialConflictMatches.push(line);
         } else if (res.numericMatched && q.hasExactCode && !res.genConflict && !res.suffixConflict) {
-          if (!q.series || c.series === q.series || c.series.includes(q.series)) {
+          if (this.isSeriesCompatible(q.series, c.series)) {
             exactMatchLine = line;
             break;
           }
@@ -842,7 +872,7 @@ class ModelChecker {
       for (const line of catalog) {
         const c = this.extractKeys(line);
         if (q.brand && c.brand && q.brand !== c.brand) continue;
-        if (q.series && c.series && q.series !== c.series) continue;
+        if (!this.isSeriesCompatible(q.series, c.series)) continue;
         const allCodesMatch = q.codes.length > 0 && q.codes.every(code => c.comp.includes(code));
         if (allCodesMatch) {
           if (q.gen && c.gen && q.gen !== c.gen) continue;
@@ -890,7 +920,7 @@ class ModelChecker {
 
       // Rule B: Series match (if user specified a series, like Latitude, LOQ, Inspiron, Aspire 3, etc.)
       if (q.series) {
-        const seriesMatch = Boolean(c.series) && (c.series === q.series || c.series.includes(q.series) || q.series.includes(c.series));
+        const seriesMatch = Boolean(c.series) && this.isSeriesCompatible(q.series, c.series);
         if (!seriesMatch) continue;
       }
 
@@ -1095,11 +1125,11 @@ class ModelChecker {
         <div class="options-title">${title} <span>${uniqueList.length}</span></div>
         <div class="catalog-list">
           ${uniqueList.map((model, index) => `
-            <div class="catalog-option" style="--option-index: ${index};" onclick="window.modelChecker && window.modelChecker.selectCatalogOption('${this.escapeHtml(model).replace(/'/g, "\\'")}')">
+            <button class="catalog-option" type="button" style="--option-index: ${index};" data-catalog-model="${this.escapeHtml(model)}">
               <span class="option-number">${String(index + 1).padStart(2, '0')}</span>
               <span class="option-name">${this.escapeHtml(model)}</span>
               <span class="option-arrow">↗</span>
-            </div>
+            </button>
           `).join('')}
         </div>
       </div>
@@ -1115,6 +1145,24 @@ class ModelChecker {
   async handlePDFUpload() {
     const file = this.pdfInput.files[0];
     if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      this.showPdfError('Please select a PDF catalog file.');
+      return;
+    }
+    if (file.size > MAX_PDF_SIZE) {
+      this.showPdfError('This PDF is too large. Please use a file smaller than 20 MB.');
+      return;
+    }
+
+    // A failed replacement must never leave the previous catalog available.
+    this.pdfLoaded = false;
+    this.pdfText = '';
+    this.models.clear();
+    this.modelLabels.clear();
+    this.catalogLines = [];
+    this.searchBtn.disabled = true;
+    this.updateAiButtons();
 
     this.pdfFileName.textContent = file.name;
     this.pdfStatus.textContent = 'Extracting text...';
@@ -1199,6 +1247,9 @@ class ModelChecker {
 
       this.pdfText = fullText;
       this.extractModels(fullText);
+      if (!this.catalogLines.length) {
+        throw new Error('No readable model entries were found in this PDF.');
+      }
       this.pdfLoaded = true;
 
       this.pdfStatus.textContent = `✅ Loaded ${this.models.size} models from ${file.name}`;
@@ -1211,10 +1262,21 @@ class ModelChecker {
       this.searchInput.focus();
     } catch (error) {
       console.error('PDF error:', error);
-      this.pdfStatus.textContent = '❌ Failed to load PDF';
-      this.pdfStatus.style.color = '#f87171';
-      this.pdfLoaded = false;
+      this.showPdfError(error.message || 'Failed to load PDF.');
     }
+  }
+
+  showPdfError(message) {
+    this.pdfLoaded = false;
+    this.pdfText = '';
+    this.models.clear();
+    this.modelLabels.clear();
+    this.catalogLines = [];
+    this.searchBtn.disabled = true;
+    this.updateAiButtons();
+    this.pdfStatus.textContent = `❌ ${message}`;
+    this.pdfStatus.style.color = '#f87171';
+    this.aiStatus.textContent = 'Upload a readable PDF catalog to start.';
   }
 
   async handleSearch() {
@@ -1303,7 +1365,7 @@ class ModelChecker {
 
     try {
       const cleanCatalog = this.getCleanCatalog();
-      const response = await fetch(`${AI_API_BASE_URL}/api/ai-check`, {
+      const response = await this.fetchWithTimeout(`${AI_API_BASE_URL}/api/ai-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1430,7 +1492,14 @@ class ModelChecker {
       formData.append('image', file);
       formData.append('availableModels', JSON.stringify(cleanCatalog));
 
-      const response = await fetch(`${AI_API_BASE_URL}/api/ai-image-check`, {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        throw new Error('Use a JPG, PNG, or WebP image.');
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        throw new Error('Please use an image smaller than 10 MB.');
+      }
+
+      const response = await this.fetchWithTimeout(`${AI_API_BASE_URL}/api/ai-image-check`, {
         method: 'POST',
         body: formData
       });
@@ -1486,11 +1555,13 @@ class ModelChecker {
         ${data.question ? `<div class="match-info"><strong>Question:</strong> ${this.escapeHtml(data.question)}</div>` : ''}
         <div class="match-info">Confidence: ${data.confidence || 0}%</div>
       `;
-      this.aiStatus.textContent = data.available ? 'Image match ready' : 'Image checked';
+      this.aiStatus.textContent = data.status === 'available' ? 'Image match ready' : 'Image checked';
     } catch (error) {
       console.error('AI image lookup error:', error);
       this.aiResult.className = 'result not-found';
-      const message = error instanceof TypeError
+      const message = error.name === 'AbortError'
+        ? 'The AI request took too long. Please try again.'
+        : error instanceof TypeError
         ? 'The remote AI backend could not be reached. Render may still be deploying or sleeping.'
         : error.message;
       this.aiResult.innerHTML = `<div>❌ Image lookup failed</div><div class="match-info">${this.escapeHtml(message)}</div>`;

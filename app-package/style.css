@@ -834,6 +834,9 @@ textarea:focus {
 .catalog-list { display: grid; gap: 6px; }
 
 .catalog-option {
+  width: 100%;
+  font: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -845,10 +848,14 @@ textarea:focus {
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.45;
-  cursor: default;
+  cursor: pointer;
   animation: option-in 400ms var(--ease-out) both;
   animation-delay: calc(var(--option-index) * 50ms);
   transition: all 0.25s var(--ease-out);
+}
+.catalog-option:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 2px;
 }
 .catalog-option:hover {
   border-color: var(--border-hover);

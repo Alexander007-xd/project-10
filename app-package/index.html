@@ -43,7 +43,7 @@
             <div class="file-cta">Tap or drop your catalog PDF here</div>
             <div class="file-name" id="pdfFileName">No file selected</div>
           </label>
-          <div id="pdfStatus" class="status-bar"></div>
+          <div id="pdfStatus" class="status-bar" role="status" aria-live="polite"></div>
         </div>
 
         <section id="manualPanel" class="panel active">
@@ -76,7 +76,7 @@
             <label class="input-label" for="aiPromptInput">Describe the model or ask a question</label>
             <div class="ai-hint">Ask about any model, or upload a photo of the laptop sticker/cover for Gemini to identify it and cross-check against your PDF.</div>
             <textarea id="aiPromptInput" rows="4" placeholder="Example: Is HP EliteBook 840 G3 available in the PDF? Or check if A315-58 is in the list."></textarea>
-            <input type="file" id="aiImageInput" class="file-input" accept="image/jpeg,image/png,image/webp" />
+            <input type="file" id="aiImageInput" class="file-input" accept="image/jpeg,image/png,image/webp" capture="environment" />
             <label class="file-label ai-image-label" for="aiImageInput">
               <div class="file-icon">✦</div>
               <div class="file-cta">Upload or snap a photo of the laptop</div>
@@ -90,14 +90,14 @@
                 <span class="btn-text">📷 Scan image</span>
               </button>
             </div>
-            <div id="aiStatus" class="ai-status">Upload a PDF catalog to start</div>
-            <div id="aiResult" class="result ai-result" style="display:none;"></div>
+            <div id="aiStatus" class="ai-status" role="status" aria-live="polite">Upload a PDF catalog to start</div>
+            <div id="aiResult" class="result ai-result" style="display:none;" aria-live="polite"></div>
           </div>
         </section>
       </main>
     </div>
 
     <script src="config.js?v=1"></script>
-    <script src="app.js?v=71"></script>
+    <script src="app.js?v=73"></script>
   </body>
 </html>
