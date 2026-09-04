@@ -37,6 +37,15 @@ def compact_model(text: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", normalize_model(text))
 
 
+def model_code(text: str) -> str:
+    compact = compact_model(text)
+    numeric_candidates = re.findall(r"\d{3,6}[A-Z]\d{1,3}[A-Z]?|\d{3,6}[A-Z]{1,3}", compact)
+    if numeric_candidates:
+        return max(numeric_candidates, key=len)
+    letter_candidates = re.findall(r"[A-Z]{1,6}\d{2,6}[A-Z]{0,3}", compact)
+    return max(letter_candidates, key=len) if letter_candidates else compact
+
+
 def query_fragments(query: str) -> List[str]:
     normalized = normalize_model(query)
     tokens = normalized.split()
@@ -67,13 +76,15 @@ def find_model_matches(query: str, available_models: List[str]) -> List[str]:
         return []
     fragments = [max(fragments, key=len)]
 
-    matches = []
+    exact_matches = []
+    partial_matches = []
     for model in available_models:
-        model_compact = compact_model(model)
-        if any(fragment and (fragment == model_compact or fragment in model_compact or model_compact in fragment)
-               for fragment in fragments):
-            matches.append(model)
-    return list(dict.fromkeys(matches))
+        model_compact = model_code(model)
+        if any(fragment and fragment == model_compact for fragment in fragments):
+            exact_matches.append(model)
+        elif any(fragment and (fragment in model_compact or model_compact in fragment) for fragment in fragments):
+            partial_matches.append(model)
+    return list(dict.fromkeys(exact_matches or partial_matches))
 
 
 @app.route("/api/ai-check", methods=["POST"])

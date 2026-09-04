@@ -173,9 +173,28 @@ class ModelChecker {
   }
 
   findLocalMatches(query) {
-    return Array.from(this.models)
-      .filter(model => this.isModelMatch(query, model))
-      .map(model => this.displayModel(model));
+    const normalizedQuery = this.normalizeModel(query);
+    const models = Array.from(this.models);
+    const exactModels = models.filter(model => this.normalizeModel(model) === normalizedQuery);
+    const matchingModels = exactModels.length ? exactModels : models.filter(model => this.isModelMatch(query, model));
+    return matchingModels.map(model => this.displayModel(model));
+  }
+
+  renderCatalogMatches(matches, title = 'PDF catalog matches') {
+    return `
+      <div class="catalog-options">
+        <div class="options-title">${title} <span>${matches.length}</span></div>
+        <div class="catalog-list">
+          ${matches.map((model, index) => `
+            <div class="catalog-option" style="--option-index: ${index};">
+              <span class="option-number">${String(index + 1).padStart(2, '0')}</span>
+              <span class="option-name">${this.escapeHtml(model)}</span>
+              <span class="option-arrow">↗</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
   }
 
   async handlePDFUpload() {
@@ -235,15 +254,7 @@ class ModelChecker {
       this.searchResult.className = 'result available';
       this.searchResult.innerHTML = `
         <div>✅ Available</div>
-        <div class="catalog-options">
-          <div class="options-title">PDF catalog matches (${matchedModels.length})</div>
-          ${matchedModels.map((model, index) => `
-            <div class="catalog-option">
-              <span class="option-number">${index + 1}</span>
-              <span>${this.escapeHtml(model)}</span>
-            </div>
-          `).join('')}
-        </div>
+        ${this.renderCatalogMatches(matchedModels)}
       `;
     } else {
       this.searchResult.className = 'result not-found';
@@ -300,7 +311,7 @@ class ModelChecker {
       const statusText = data.available ? '✅ Available' : '❌ Not Found';
       const statusClass = data.available ? 'result available' : 'result not-found';
       const options = matchedModels.length
-        ? `<div class="catalog-options"><div class="options-title">PDF catalog matches</div>${matchedModels.map((model, index) => `<div class="catalog-option"><span class="option-number">${index + 1}</span><span>${this.escapeHtml(model)}</span></div>`).join('')}</div>`
+        ? this.renderCatalogMatches(matchedModels)
         : '';
       const serviceNotice = data.aiUnavailable
         ? '<div class="match-info">Gemini is temporarily busy. This result was checked directly against your PDF.</div>'
@@ -322,7 +333,7 @@ class ModelChecker {
         this.aiResult.className = 'result available';
         this.aiResult.innerHTML = `
           <div>✅ Available in your PDF</div>
-          <div class="catalog-options"><div class="options-title">PDF catalog matches</div>${localMatches.map((model, index) => `<div class="catalog-option"><span class="option-number">${index + 1}</span><span>${this.escapeHtml(model)}</span></div>`).join('')}</div>
+          ${this.renderCatalogMatches(localMatches)}
           <div class="match-info">AI explanation is temporarily unavailable, but the catalog match is confirmed locally.</div>
         `;
         this.aiStatus.textContent = 'Catalog result ready';

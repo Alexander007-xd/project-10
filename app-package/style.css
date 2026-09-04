@@ -70,7 +70,7 @@ textarea { min-height: 126px; padding: 15px 16px; resize: vertical; }
 .btn:active:not(:disabled) { transform: translateY(0) scale(0.985); }
 .btn:disabled { color: #6b8178; cursor: not-allowed; background: rgba(148, 173, 161, 0.16); box-shadow: none; }
 .result { margin-top: 15px; padding: 16px; border-radius: 15px; text-align: center; font-weight: 700; animation: resultIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-.result.available { border: 1px solid rgba(79, 224, 160, 0.3); color: var(--mint); background: linear-gradient(145deg, rgba(79, 224, 160, 0.13), rgba(79, 224, 160, 0.04)); }
+.result.available { border: 1px solid rgba(79, 224, 160, 0.3); color: var(--mint); background: linear-gradient(145deg, rgba(79, 224, 160, 0.16), rgba(79, 224, 160, 0.04)); box-shadow: 0 14px 36px rgba(79, 224, 160, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05); }
 .result.not-found { border: 1px solid rgba(255, 155, 155, 0.28); color: var(--red); background: rgba(255, 155, 155, 0.08); }
 .result.loading { border: 1px solid rgba(255, 213, 138, 0.3); color: var(--amber); background: rgba(255, 213, 138, 0.08); }
 .result .match-info { margin-top: 8px; color: var(--muted); font-size: 0.78rem; font-weight: 500; line-height: 1.5; }
@@ -86,13 +86,18 @@ textarea { min-height: 126px; padding: 15px 16px; resize: vertical; }
 .ai-status { min-height: 18px; }
 .ai-result { display: block; }
 .catalog-options { display: grid; gap: 8px; margin-top: 15px; text-align: left; }
-.options-title { color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; }
-.catalog-option { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; border: 1px solid rgba(158, 244, 201, 0.18); border-radius: 11px; color: var(--text); font-size: 0.78rem; font-weight: 600; line-height: 1.45; background: rgba(158, 244, 201, 0.06); transition: border-color 180ms ease, background 180ms ease, transform 180ms ease; }
+.options-title { display: flex; align-items: center; justify-content: space-between; color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.options-title span { display: inline-grid; min-width: 25px; height: 22px; place-items: center; border: 1px solid rgba(158, 244, 201, 0.24); border-radius: 99px; color: var(--mint); font-size: 0.62rem; letter-spacing: 0; background: rgba(158, 244, 201, 0.08); }
+.catalog-list { display: grid; gap: 8px; }
+.catalog-option { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; border: 1px solid rgba(158, 244, 201, 0.18); border-radius: 11px; color: var(--text); font-size: 0.78rem; font-weight: 600; line-height: 1.45; background: rgba(158, 244, 201, 0.06); animation: optionIn 360ms ease both; animation-delay: calc(var(--option-index) * 45ms); transition: border-color 180ms ease, background 180ms ease, transform 180ms ease; }
 .catalog-option:hover { border-color: rgba(158, 244, 201, 0.4); background: rgba(158, 244, 201, 0.1); transform: translateX(3px); }
+.option-name { flex: 1; }
+.option-arrow { color: rgba(158, 244, 201, 0.58); font-size: 1rem; line-height: 1.3; }
 .option-number { display: grid; flex: 0 0 22px; width: 22px; height: 22px; place-items: center; border-radius: 50%; color: #06110b; font-family: 'DM Mono', monospace; font-size: 0.65rem; background: var(--mint); }
 
 @keyframes panelIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes resultIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes optionIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes sheen { 0%, 58% { left: -40%; opacity: 0; } 66% { opacity: 1; } 78%, 100% { left: 120%; opacity: 0; } }
 @keyframes drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(30px, -22px, 0) scale(1.08); } }
 
