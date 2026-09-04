@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b1020" />
     <title>ModelMatch Pro</title>
-    <link rel="stylesheet" href="style.css?v=5" />
+    <link rel="stylesheet" href="style.css?v=6" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -31,7 +30,7 @@
           <div class="hero-card">
             <span class="eyebrow">Smart availability scan</span>
             <h1>Check if a laptop model is in your PDF catalog</h1>
-            <p>Upload a product PDF, search by model, or scan a laptop screenshot for instant matching.</p>
+            <p>Upload a product PDF, search by model, or let the AI assistant inspect a laptop image.</p>
           </div>
 
           <div class="card">
@@ -54,23 +53,6 @@
             <div id="searchResult" class="result" style="display:none;"></div>
           </div>
 
-          <div class="card">
-            <h2><span class="icon">📷</span> 3. Screenshot OCR</h2>
-            <p class="helper-text">
-              Upload a screenshot of the laptop sticker or bezel, and the app will read the model text and compare it with your PDF list.
-            </p>
-            <input type="file" id="imgInput" class="file-input" accept="image/*" />
-            <label class="file-label" id="imgLabel" for="imgInput">
-              <div class="file-icon">🖼️</div>
-              <div>Tap to select screenshot</div>
-              <div class="file-name" id="imgFileName">No file selected</div>
-            </label>
-            <div id="ocrProgress" class="ocr-progress">
-              <div id="ocrStatus">Initializing OCR engine...</div>
-              <div class="progress-bar"><div class="progress-bar-fill" id="ocrBar"></div></div>
-            </div>
-            <div id="ocrResult" class="result" style="display:none;"></div>
-          </div>
         </section>
 
         <section id="aiPanel" class="panel">
@@ -82,8 +64,14 @@
 
           <div class="card ai-card">
             <label class="input-label" for="aiPromptInput">Describe the model or ask a question</label>
-            <div class="ai-hint">Upload your PDF in Manual Search first. Try a base number such as <strong>840</strong> to see every matching option.</div>
+            <div class="ai-hint">Upload your PDF in Manual Search first. Type a model, or upload a laptop sticker image for Gemini to identify it.</div>
             <textarea id="aiPromptInput" rows="5" placeholder="Example: Is HP EliteBook 840 G3 available in the PDF? Or check if A315-58 is in the list."></textarea>
+            <input type="file" id="aiImageInput" class="file-input" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" />
+            <label class="file-label ai-image-label" for="aiImageInput">
+              <div class="file-icon">✦</div>
+              <div>Ask AI to read a laptop image</div>
+              <div class="file-name" id="aiImageFileName">No image selected</div>
+            </label>
             <div class="ai-actions">
               <button class="btn btn-primary" id="aiSearchBtn" type="button">Ask AI</button>
             </div>
@@ -95,6 +83,6 @@
     </div>
 
     <script src="config.js?v=1"></script>
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
   </body>
 </html>

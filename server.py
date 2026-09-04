@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import json
 from typing import List
 
 from flask import Flask, jsonify, request
@@ -22,6 +23,25 @@ Task:
 - Be conservative: only mark available when there is a strong match.
 - Ignore irrelevant text and focus on model names.
 - Keep the response concise: 2 to 4 short lines.
+"""
+
+IMAGE_SYSTEM_PROMPT = """
+You are ModelMatch Pro, a careful laptop identification assistant.
+
+Inspect the uploaded laptop photo, sticker, bezel, BIOS screen, or product label.
+Identify the clearest manufacturer, product family, model number, series, and suffix.
+Do not invent text that is not visible. Ignore serial numbers, asset tags, barcodes,
+Windows keys, CPU names, and unrelated marketing text unless they help identify the model.
+Use the provided catalog only for availability; never claim a model is available without
+a strong match to a catalog entry. Short or partial codes should be matched conservatively.
+
+Return JSON only with this shape:
+{
+    "identified_model": "best visible model text or empty string",
+    "confidence": 0,
+    "reasoning": "one concise sentence"
+}
+Confidence must be an integer from 0 to 100.
 """
 
 TEMPERATURE = 0.2
@@ -160,6 +180,87 @@ def ai_check():
         "reasoning": reasoning,
         "confidence": 98 if matches else 72,
         "aiUnavailable": bool(ai_error and not answer),
+    })
+
+
+@app.route("/api/ai-image-check", methods=["POST"])
+def ai_image_check():
+    api_key = os.getenv("GOOGLE_API_KEY")
+    image = request.files.get("image")
+    if not image:
+        return jsonify({"error": "Please upload an image."}), 400
+
+    try:
+        available_models = json.loads(request.form.get("availableModels", "[]"))
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid catalog model data."}), 400
+
+    if not isinstance(available_models, list):
+        return jsonify({"error": "Catalog model data must be a list."}), 400
+
+    if not api_key:
+        return jsonify({"error": "Missing GOOGLE_API_KEY on the AI backend."}), 500
+
+    image_bytes = image.read()
+    if not image_bytes:
+        return jsonify({"error": "The uploaded image is empty."}), 400
+    if len(image_bytes) > 10 * 1024 * 1024:
+        return jsonify({"error": "Please upload an image smaller than 10 MB."}), 400
+
+    mime_type = image.mimetype or "image/jpeg"
+    catalog = ", ".join(str(model) for model in available_models) or "No models provided."
+    vision_prompt = (
+        "Identify the laptop model in this image. Then compare it with this PDF catalog.\n"
+        f"PDF catalog models: {catalog}\n"
+        "Return only the requested JSON object."
+    )
+
+    answer = ""
+    ai_error = None
+    try:
+        client = genai.Client(api_key=api_key)
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=[image_part, vision_prompt],
+                    config=types.GenerateContentConfig(
+                        system_instruction=IMAGE_SYSTEM_PROMPT,
+                        temperature=0.15,
+                        max_output_tokens=160,
+                        response_mime_type="application/json",
+                    ),
+                )
+                answer = (response.text or "").strip()
+                break
+            except Exception as exc:  # pragma: no cover
+                ai_error = str(exc)
+                if "503" not in ai_error and "UNAVAILABLE" not in ai_error:
+                    break
+                if attempt < 2:
+                    time.sleep(1 + attempt)
+    except Exception as exc:  # pragma: no cover
+        ai_error = str(exc)
+
+    if not answer:
+        return jsonify({"error": f"AI image request failed: {ai_error or 'No response returned.'}"}), 502
+
+    try:
+        identified = json.loads(answer)
+    except json.JSONDecodeError:
+        identified = {"identified_model": answer, "confidence": 35, "reasoning": "The image response was not structured."}
+
+    identified_model = str(identified.get("identified_model") or "").strip()
+    matches = find_model_matches(identified_model, available_models) if identified_model else []
+    return jsonify({
+        "available": bool(matches),
+        "identifiedModel": identified_model,
+        "matchedModel": matches[0] if matches else None,
+        "matchedModels": matches,
+        "ambiguous": len(matches) > 1,
+        "confidence": int(identified.get("confidence") or 0),
+        "reasoning": str(identified.get("reasoning") or "Image analyzed against the uploaded catalog."),
     })
 
 

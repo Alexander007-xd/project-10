@@ -1,11 +1,11 @@
 # ModelMatch Pro
 
-Laptop model availability checker with manual PDF search, OCR, and an optional Gemini AI assistant.
+Laptop model availability checker with manual PDF search and a Gemini AI assistant for text and laptop-image identification.
 
 ## Project structure
 
 - `app-package/` - static frontend for GitHub Pages
-- `server.py` - Flask API for the AI assistant
+- `server.py` - Flask API for text and image AI assistance
 - `requirements.txt` - Python dependencies
 - `render.yaml` - Render deployment configuration
 - `.gitignore` - excludes local environments and secrets
@@ -36,5 +36,7 @@ Open `http://localhost:8000/app-package/index.html`.
 5. Add `GEMINI_MODEL` with value `gemini-3.6-flash` in Render Environment Variables.
 6. Put the Render service URL in `app-package/config.js`.
 7. Enable GitHub Pages from the repository's `main` branch and open `/app-package/index.html`.
+
+The AI image feature sends the uploaded image to the backend for Gemini analysis. The browser no longer runs OCR locally.
 
 Never commit a real API key to the repository.

@@ -30,26 +30,25 @@ class ModelChecker {
     this.searchBtn = document.getElementById('searchBtn');
     this.searchResult = document.getElementById('searchResult');
 
-    this.imgInput = document.getElementById('imgInput');
-    this.imgFileName = document.getElementById('imgFileName');
-    this.ocrProgress = document.getElementById('ocrProgress');
-    this.ocrStatus = document.getElementById('ocrStatus');
-    this.ocrBar = document.getElementById('ocrBar');
-    this.ocrResult = document.getElementById('ocrResult');
-
     this.manualTabBtn = document.getElementById('manualTabBtn');
     this.aiTabBtn = document.getElementById('aiTabBtn');
     this.manualPanel = document.getElementById('manualPanel');
     this.aiPanel = document.getElementById('aiPanel');
 
     this.aiPromptInput = document.getElementById('aiPromptInput');
+    this.aiImageInput = document.getElementById('aiImageInput');
+    this.aiImageFileName = document.getElementById('aiImageFileName');
     this.aiSearchBtn = document.getElementById('aiSearchBtn');
     this.aiStatus = document.getElementById('aiStatus');
     this.aiResult = document.getElementById('aiResult');
 
     this.pdfInput.addEventListener('change', () => this.handlePDFUpload());
     this.searchBtn.addEventListener('click', () => this.handleSearch());
-    this.imgInput.addEventListener('change', () => this.handleImageUpload());
+    this.aiImageInput.addEventListener('change', () => {
+      const file = this.aiImageInput.files[0];
+      this.aiImageFileName.textContent = file ? file.name : 'No image selected';
+      if (file) this.aiPromptInput.value = '';
+    });
     this.searchInput.addEventListener('input', () => {
       this.searchBtn.disabled = !this.pdfLoaded || !this.searchInput.value.trim();
     });
@@ -282,6 +281,11 @@ class ModelChecker {
   }
 
   async handleAiSearch() {
+    if (this.aiImageInput.files[0]) {
+      await this.handleAiImageSearch(this.aiImageInput.files[0]);
+      return;
+    }
+
     const prompt = this.aiPromptInput.value.trim();
     if (!this.pdfLoaded) {
       this.aiStatus.textContent = 'Upload your PDF catalog first.';
@@ -361,6 +365,50 @@ class ModelChecker {
     }
   }
 
+  async handleAiImageSearch(file) {
+    if (!this.pdfLoaded) {
+      this.aiStatus.textContent = 'Upload your PDF catalog first.';
+      this.aiResult.style.display = 'block';
+      this.aiResult.className = 'result not-found';
+      this.aiResult.innerHTML = '<div>Upload a PDF before scanning an image.</div>';
+      return;
+    }
+
+    this.aiStatus.textContent = 'Gemini is inspecting the image...';
+    this.aiResult.style.display = 'block';
+    this.aiResult.className = 'result loading';
+    this.aiResult.innerHTML = '<div>Identifying laptop model...</div><div class="match-info">The image is sent securely to the AI backend for analysis.</div>';
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('availableModels', JSON.stringify(Array.from(this.models).map(model => this.displayModel(model))));
+
+      const response = await fetch(`${AI_API_BASE_URL}/api/ai-image-check`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'AI image lookup failed');
+
+      const matches = Array.isArray(data.matchedModels) ? data.matchedModels : [];
+      this.aiResult.className = data.available ? 'result available' : 'result not-found';
+      this.aiResult.innerHTML = `
+        <div>${data.available ? '✅ Available in your PDF' : '❌ Not Found in your PDF'}</div>
+        <div class="match-info"><strong>AI identified:</strong> ${this.escapeHtml(data.identifiedModel || 'Model not clear')}</div>
+        ${matches.length ? this.renderCatalogMatches(matches, 'PDF catalog matches') : ''}
+        <div class="match-info">${this.escapeHtml(data.reasoning || 'The assistant could not identify a confident model.')}</div>
+        <div class="match-info">Confidence: ${data.confidence || 0}%</div>
+      `;
+      this.aiStatus.textContent = data.available ? 'Image match ready' : 'Image checked';
+    } catch (error) {
+      console.error('AI image lookup error:', error);
+      this.aiResult.className = 'result not-found';
+      this.aiResult.innerHTML = `<div>❌ Image lookup failed</div><div class="match-info">${this.escapeHtml(error.message)}</div>`;
+      this.aiStatus.textContent = 'Check the AI backend and try again.';
+    }
+  }
+
   escapeHtml(value) {
     return String(value || '').replace(/[&<>'"]/g, (character) => ({
       '&': '&amp;',
@@ -371,152 +419,6 @@ class ModelChecker {
     }[character]));
   }
 
-  async handleImageUpload() {
-    const file = this.imgInput.files[0];
-    if (!file) return;
-
-    this.imgFileName.textContent = file.name;
-    this.ocrProgress.classList.add('active');
-    this.ocrStatus.textContent = 'Preparing image...';
-    this.updateOCRProgress(0);
-
-    try {
-      const img = await this.loadImageFile(file);
-      this.ocrStatus.textContent = 'Running OCR (this may take 10-30s)...';
-      this.updateOCRProgress(25);
-
-      const { data: { text } } = await Tesseract.recognize(img, 'eng', {
-        logger: (message) => {
-          if (message.status === 'recognizing text') {
-            const progress = 25 + Math.round((message.progress || 0) * 50);
-            this.updateOCRProgress(progress);
-            this.ocrStatus.textContent = `OCR: ${Math.round((message.progress || 0) * 100)}%`;
-          }
-        }
-      });
-
-      this.updateOCRProgress(75);
-      this.ocrStatus.textContent = 'Extracting models from text...';
-
-      const ocrText = text.toUpperCase();
-      const potentialModels = this.extractModelsFromText(ocrText);
-
-      let foundAny = false;
-      let bestMatch = null;
-      let matchedModel = null;
-
-      for (const model of potentialModels) {
-        const normalizedModel = this.normalizeModel(model);
-        if (this.models.has(normalizedModel)) {
-          foundAny = true;
-          bestMatch = normalizedModel;
-          matchedModel = normalizedModel;
-          break;
-        }
-
-        for (const pdfModel of this.models) {
-          if (this.isModelMatch(model, pdfModel)) {
-            foundAny = true;
-            bestMatch = `${normalizedModel} → ${pdfModel}`;
-            matchedModel = pdfModel;
-            break;
-          }
-        }
-        if (foundAny) break;
-      }
-
-      this.ocrResult.style.display = 'block';
-      if (foundAny && matchedModel) {
-        this.searchInput.value = matchedModel;
-        this.ocrResult.className = 'result available';
-        this.ocrResult.innerHTML = `
-          <div>✅ Model Found!</div>
-          <div class="match-info">OCR Text: "${ocrText.substring(0, 50)}${ocrText.length > 50 ? '...' : ''}"<br>Match: ${bestMatch}</div>
-        `;
-        this.searchBtn.disabled = false;
-      } else {
-        this.ocrResult.className = 'result not-found';
-        this.ocrResult.innerHTML = `
-          <div>❌ No Match Found</div>
-          <div class="match-info">OCR Text: "${ocrText.substring(0, 50)}${ocrText.length > 50 ? '...' : ''}"<br>Checked ${potentialModels.length} potential models</div>
-        `;
-      }
-
-      this.updateOCRProgress(100);
-      setTimeout(() => this.ocrProgress.classList.remove('active'), 1500);
-    } catch (error) {
-      console.error('OCR error:', error);
-      this.ocrResult.style.display = 'block';
-      this.ocrResult.className = 'result not-found';
-      this.ocrResult.innerHTML = '<div>❌ OCR Failed</div><div class="match-info">Please try a clearer screenshot</div>';
-      this.ocrProgress.classList.remove('active');
-    }
-  }
-
-  loadImageFile(file) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX_SIZE = 1400;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > MAX_SIZE || height > MAX_SIZE) {
-          const scale = Math.min(MAX_SIZE / width, MAX_SIZE / height);
-          width *= scale;
-          height *= scale;
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        ctx.filter = 'contrast(1.7) saturate(1.2)';
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-          const threshold = gray > 170 ? 255 : gray < 80 ? 0 : gray;
-          data[i] = threshold;
-          data[i + 1] = threshold;
-          data[i + 2] = threshold;
-        }
-        ctx.putImageData(imageData, 0, 0);
-
-        resolve(canvas);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
-  extractModelsFromText(text) {
-    const models = new Set();
-    const patterns = [
-      /[A-Z]{1,4}-?\d{2,5}[A-Z]{0,2}/g,
-      /\d{3,5}[A-Z]{1,3}/g,
-      /\d{3,5}\s*[A-Z]\s*\d{1,3}[A-Z]?/g,
-      /[A-Z]{2,4}-?\d{2,5}[A-Z]{0,2}/g,
-      /[A-Z]\d{1,3}[A-Z]{1,2}\d{1,4}/g
-    ];
-
-    patterns.forEach((pattern) => {
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-        const model = this.normalizeModel(match[0]);
-        if (this.isLikelyModel(model)) models.add(model);
-      }
-    });
-
-    return Array.from(models);
-  }
-
-  updateOCRProgress(percent) {
-    this.ocrBar.style.width = percent + '%';
-  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
