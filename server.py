@@ -117,7 +117,14 @@ def model_code(text: str) -> str:
     if numeric_candidates:
         return max(numeric_candidates, key=len)
     letter_candidates = re.findall(r"[A-Z]{1,6}\d{2,6}[A-Z]{0,3}", compact)
-    return max(letter_candidates, key=len) if letter_candidates else compact
+    if letter_candidates:
+        return max(letter_candidates, key=len)
+    # 4-5 digit standalone model numbers (e.g. Dell 3511, 5420, 9305)
+    four_digit = re.findall(r"\b\d{4,5}\b", str(text or ""))
+    valid_four_digit = [d for d in four_digit if not (len(d) == 4 and (d.startswith("19") or d.startswith("20")))]
+    if valid_four_digit:
+        return valid_four_digit[0]
+    return compact
 
 
 def query_fragments(query: str) -> List[str]:

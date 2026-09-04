@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#06050e" />
     <meta name="description" content="SkinSync — instantly check if a laptop skin design is available for your model. Upload a PDF catalog and search by model or let AI identify it from a photo." />
     <title>SkinSync — Laptop Skin Finder</title>
-    <link rel="stylesheet" href="style.css?v=7" />
+    <link rel="stylesheet" href="style.css?v=8" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   </head>
   <body>
@@ -21,63 +21,76 @@
         </div>
 
         <div class="tab-switcher" aria-label="App modes">
-          <button class="nav-btn active" id="manualTabBtn" type="button">Manual Search</button>
-          <button class="nav-btn" id="aiTabBtn" type="button">AI Assistant</button>
+          <button class="nav-btn active" id="manualTabBtn" type="button">
+            <span class="btn-content"><span class="tab-icon">🔎</span> Manual Search</span>
+          </button>
+          <button class="nav-btn" id="aiTabBtn" type="button">
+            <span class="btn-content"><span class="tab-icon">✦</span> AI Assistant</span>
+          </button>
         </div>
       </header>
 
       <main class="workspace">
+        <!-- Unified Catalog Upload Section — accessible in both Manual & AI modes -->
+        <div class="card catalog-card">
+          <div class="card-header">
+            <h2><span class="icon">📄</span> 1. PDF Catalog</h2>
+            <span class="badge" id="catalogBadge">Required for lookup</span>
+          </div>
+          <input type="file" id="pdfInput" class="file-input" accept=".pdf" />
+          <label class="file-label" id="pdfLabel" for="pdfInput">
+            <div class="file-icon">📂</div>
+            <div class="file-cta">Tap or drop your catalog PDF here</div>
+            <div class="file-name" id="pdfFileName">No file selected</div>
+          </label>
+          <div id="pdfStatus" class="status-bar"></div>
+        </div>
+
         <section id="manualPanel" class="panel active">
           <div class="hero-card">
-            <span class="eyebrow">Smart catalog scan</span>
+            <span class="eyebrow">Instant local scan</span>
             <h1>Find if your laptop skin is in stock</h1>
-            <p>Upload your product PDF, search by model number, or let the AI assistant identify a laptop from a photo.</p>
-          </div>
-
-          <div class="card">
-            <h2><span class="icon">📄</span> 1. Upload PDF</h2>
-            <input type="file" id="pdfInput" class="file-input" accept=".pdf" />
-            <label class="file-label" id="pdfLabel" for="pdfInput">
-              <div class="file-icon">📂</div>
-              <div>Tap to select PDF</div>
-              <div class="file-name" id="pdfFileName">No file selected</div>
-            </label>
-            <div id="pdfStatus" class="status-bar"></div>
+            <p>Search by model number (e.g. A315-58, 840 G3, 15-dw3000, Inspiron 3511) to check exact catalog availability in milliseconds.</p>
           </div>
 
           <div class="card">
             <h2><span class="icon">🔎</span> 2. Search model</h2>
             <div class="search-box">
-              <input type="text" id="searchInput" placeholder="Try: A315-58 or 840 G3" />
-              <button class="btn btn-primary" id="searchBtn" disabled>Check</button>
+              <input type="text" id="searchInput" placeholder="Try: A315-58, 840 G3, 15-dw3000, 3511, or T480" />
+              <button class="btn btn-primary" id="searchBtn" disabled>
+                <span class="btn-text">Check</span>
+              </button>
             </div>
             <div id="searchResult" class="result" style="display:none;"></div>
           </div>
-
         </section>
 
         <section id="aiPanel" class="panel">
           <div class="hero-card ai-hero">
             <span class="eyebrow">AI-powered lookup</span>
             <h2>Ask the AI about skin availability</h2>
-            <p>Cross-check any model against your catalog with Gemini AI — type a model name or snap a photo of the laptop.</p>
+            <p>Cross-check any model against your catalog with Gemini AI — type a model question or upload a photo of the laptop.</p>
           </div>
 
           <div class="card ai-card">
             <label class="input-label" for="aiPromptInput">Describe the model or ask a question</label>
-            <div class="ai-hint">Upload your PDF in Manual Search first. Type a model, or upload a laptop sticker image for Gemini to identify it.</div>
-            <textarea id="aiPromptInput" rows="5" placeholder="Example: Is HP EliteBook 840 G3 available in the PDF? Or check if A315-58 is in the list."></textarea>
+            <div class="ai-hint">Ask about any model, or upload a photo of the laptop sticker/cover for Gemini to identify it and cross-check against your PDF.</div>
+            <textarea id="aiPromptInput" rows="4" placeholder="Example: Is HP EliteBook 840 G3 available in the PDF? Or check if A315-58 is in the list."></textarea>
             <input type="file" id="aiImageInput" class="file-input" accept="image/jpeg,image/png,image/webp" />
             <label class="file-label ai-image-label" for="aiImageInput">
               <div class="file-icon">✦</div>
-              <div>Ask AI to read a laptop image</div>
+              <div class="file-cta">Upload or snap a photo of the laptop</div>
               <div class="file-name" id="aiImageFileName">No image selected</div>
             </label>
             <div class="ai-actions">
-              <button class="btn btn-primary" id="aiTextBtn" type="button">Check typed model</button>
-              <button class="btn btn-secondary" id="aiImageBtn" type="button">Scan image</button>
+              <button class="btn btn-primary" id="aiTextBtn" type="button">
+                <span class="btn-text">✦ Check typed model</span>
+              </button>
+              <button class="btn btn-secondary" id="aiImageBtn" type="button">
+                <span class="btn-text">📷 Scan image</span>
+              </button>
             </div>
-            <div id="aiStatus" class="ai-status">Ready</div>
+            <div id="aiStatus" class="ai-status">Upload a PDF catalog to start</div>
             <div id="aiResult" class="result ai-result" style="display:none;"></div>
           </div>
         </section>
@@ -85,6 +98,6 @@
     </div>
 
     <script src="config.js?v=1"></script>
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=19"></script>
   </body>
 </html>
