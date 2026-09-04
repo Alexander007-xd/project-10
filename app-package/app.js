@@ -180,23 +180,27 @@ class ModelChecker {
 
         candidates.forEach((item) => {
           const model = this.normalizeModel(item);
-          if (this.isLikelyModel(model)) this.addModel(model, line);
+          if (this.isLikelyModel(model)) this.addModel(model, line, item.trim());
         });
 
         patterns.forEach((pattern) => {
           const matches = line.match(pattern) || [];
           matches.forEach((match) => {
             const model = this.normalizeModel(match);
-            if (this.isLikelyModel(model)) this.addModel(model, line);
+            if (this.isLikelyModel(model)) this.addModel(model, line, match.trim());
           });
         });
       });
     });
   }
 
-  addModel(model, sourceLine) {
+  addModel(model, sourceLine, rawText) {
     this.models.add(model);
-    if (!this.modelLabels.has(model)) {
+    if (!this.modelLabels.has(model) && rawText) {
+      // Preserve the original text from the PDF (e.g. "A315-58") as the
+      // display label, rather than the normalized form ("A31558").
+      this.modelLabels.set(model, rawText.toUpperCase());
+    } else if (!this.modelLabels.has(model)) {
       this.modelLabels.set(model, model);
     }
   }
@@ -258,7 +262,8 @@ class ModelChecker {
 
       this.pdfStatus.textContent = `✅ Loaded ${this.models.size} models`;
       this.pdfStatus.style.color = '#2dd4bf';
-      this.searchBtn.disabled = false;
+      // Re-evaluate search button state (Bug 8: was staying disabled if text was already typed)
+      this.searchBtn.disabled = !this.searchInput.value.trim();
       this.updateAiButtons();
       this.aiStatus.textContent = 'Catalog ready';
       this.searchInput.focus();
@@ -277,6 +282,9 @@ class ModelChecker {
 
     this.searchBtn.disabled = true;
     this.searchResult.style.display = 'block';
+    // Force re-trigger animation by temporarily removing the class
+    this.searchResult.className = '';
+    void this.searchResult.offsetWidth; // reflow
     this.searchResult.className = 'result loading';
     this.searchResult.innerHTML = '<div>Searching...</div>';
 
@@ -318,8 +326,12 @@ class ModelChecker {
       return;
     }
 
+    this.aiTextBtn.disabled = true;
+    this.aiImageBtn.disabled = true;
     this.aiStatus.textContent = 'Asking AI assistant...';
     this.aiResult.style.display = 'block';
+    this.aiResult.className = '';
+    void this.aiResult.offsetWidth;
     this.aiResult.className = 'result loading';
     this.aiResult.innerHTML = '<div>Thinking...</div>';
 
@@ -384,6 +396,8 @@ class ModelChecker {
         <div class="match-info">${this.escapeHtml(error.message)}</div>
       `;
       this.aiStatus.textContent = 'API connection issue. Check your Python backend and Google key.';
+    } finally {
+      this.updateAiButtons();
     }
   }
 
@@ -396,8 +410,12 @@ class ModelChecker {
       return;
     }
 
+    this.aiTextBtn.disabled = true;
+    this.aiImageBtn.disabled = true;
     this.aiStatus.textContent = 'Gemini is inspecting the image...';
     this.aiResult.style.display = 'block';
+    this.aiResult.className = '';
+    void this.aiResult.offsetWidth;
     this.aiResult.className = 'result loading';
     this.aiResult.innerHTML = '<div>Identifying laptop model...</div><div class="match-info">The image is sent securely to the AI backend for analysis.</div>';
 
@@ -411,7 +429,7 @@ class ModelChecker {
         body: formData
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'AI image lookup failed');
+      if (!response.ok) throw new Error(data.error || `AI image lookup failed (${response.status})`);
 
       const matches = Array.isArray(data.matchedModels) ? data.matchedModels : [];
       const imageStatusText = {
@@ -433,8 +451,13 @@ class ModelChecker {
     } catch (error) {
       console.error('AI image lookup error:', error);
       this.aiResult.className = 'result not-found';
-      this.aiResult.innerHTML = `<div>❌ Image lookup failed</div><div class="match-info">${this.escapeHtml(error.message)}</div>`;
-      this.aiStatus.textContent = 'Check the AI backend and try again.';
+      const message = error instanceof TypeError
+        ? 'The remote AI backend could not be reached. Render may still be deploying or sleeping.'
+        : error.message;
+      this.aiResult.innerHTML = `<div>❌ Image lookup failed</div><div class="match-info">${this.escapeHtml(message)}</div>`;
+      this.aiStatus.textContent = 'Image scan failed. Try again in a moment.';
+    } finally {
+      this.updateAiButtons();
     }
   }
 

@@ -10,7 +10,16 @@ from google import genai
 from google.genai import types
 
 app = Flask(__name__)
-CORS(app)
+CORS(
+    app,
+    resources={r"/api/*": {"origins": [
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://alexander007-xd.github.io",
+    ]}},
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
 SYSTEM_PROMPT = """
 You are ModelMatch Pro, a Laptop Skin Availability Checker Assistant for a laptop-skin seller.
@@ -84,8 +93,14 @@ Confidence must be an integer from 0 to 100.
 """
 
 TEMPERATURE = 0.2
-MAX_OUTPUT_TOKENS = 120
+MAX_OUTPUT_TOKENS = 512
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", GEMINI_MODEL)
+
+
+@app.get("/health")
+def health():
+    return jsonify({"ok": True, "textModel": GEMINI_MODEL, "imageModel": GEMINI_IMAGE_MODEL})
 
 
 def normalize_model(text: str) -> str:
@@ -147,8 +162,13 @@ def find_model_matches(query: str, available_models: List[str]) -> List[str]:
 
 
 def parse_assistant_json(answer: str) -> dict:
+    text = answer.strip()
+    # Strip markdown code fences that Gemini sometimes wraps around JSON
+    fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
+    if fence_match:
+        text = fence_match.group(1).strip()
     try:
-        return json.loads(answer)
+        return json.loads(text)
     except json.JSONDecodeError:
         return {}
 
@@ -198,6 +218,7 @@ def ai_check():
                     max_output_tokens=MAX_OUTPUT_TOKENS,
                     top_p=0.9,
                     candidate_count=1,
+                    response_mime_type="application/json",
                 ),
             )
             answer = (response.text or "").strip()
@@ -212,13 +233,25 @@ def ai_check():
     is_available = bool(matches)
     matched_model = matches[0] if matches else None
     assistant_data = parse_assistant_json(answer)
-    status = "available" if matches else assistant_data.get("status", "unavailable")
-    if status not in {"available", "unavailable", "partial", "uncertain"}:
+
+    # Use AI status when available; only override with "available" if the AI
+    # didn't return a valid status and we have deterministic matches.
+    ai_status = assistant_data.get("status", "")
+    if ai_status in {"available", "unavailable", "partial", "uncertain"}:
+        status = ai_status
+    elif matches:
+        status = "available"
+    else:
         status = "unavailable"
-    if matches:
+
+    # Use parsed reasoning from AI; fall back to a deterministic message.
+    ai_reasoning = str(assistant_data.get("reasoning") or "").strip()
+    if ai_reasoning:
+        reasoning = ai_reasoning
+    elif matches:
         reasoning = f"Found {len(matches)} matching model option(s) in the PDF."
     else:
-        reasoning = answer or "No matching model was found in the PDF."
+        reasoning = "No matching model was found in the PDF."
     if ai_error and not answer:
         reasoning += " AI explanation is temporarily unavailable, so this result uses the PDF catalog match."
 
@@ -230,7 +263,7 @@ def ai_check():
         "ambiguous": len(matches) > 1,
         "reasoning": reasoning,
         "question": str(assistant_data.get("question") or ""),
-        "confidence": 98 if matches else 72,
+        "confidence": int(assistant_data.get("confidence", 98 if matches else 72)),
         "aiUnavailable": bool(ai_error and not answer),
     })
 
@@ -275,12 +308,12 @@ def ai_image_check():
         for attempt in range(3):
             try:
                 response = client.models.generate_content(
-                    model=GEMINI_MODEL,
+                    model=GEMINI_IMAGE_MODEL,
                     contents=[image_part, vision_prompt],
                     config=types.GenerateContentConfig(
                         system_instruction=IMAGE_SYSTEM_PROMPT,
                         temperature=0.15,
-                        max_output_tokens=160,
+                        max_output_tokens=400,
                         response_mime_type="application/json",
                     ),
                 )
