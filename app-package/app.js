@@ -586,6 +586,90 @@ class ModelChecker {
     return chunks[0];
   }
 
+  hasUnclosedParen(str) {
+    const open = (str.match(/\(/g) || []).length;
+    const close = (str.match(/\)/g) || []).length;
+    return open > close;
+  }
+
+  hasTrailingConnector(str) {
+    return /[-–—,/]$/.test(str.trim()) || /,\s*$/.test(str.trim());
+  }
+
+  hasLeadingContinuation(str) {
+    const s = str.trim();
+    return /^[)\];,–—]/.test(s) || /^(and|or|Series|Gen\s*\d|G\d|\(20\d\d\)|\(P\d+)/i.test(s);
+  }
+
+  startsWithBrandOrSeries(str) {
+    const firstWord = str.trim().split(/[\s-]+/)[0].toUpperCase();
+    return BRANDS.includes(firstWord) || BRAND_AND_SERIES.map(s => s.toUpperCase()).includes(firstWord);
+  }
+
+  stitchContinuationLines(lines) {
+    if (!lines || !Array.isArray(lines)) return [];
+    const result = [];
+    let current = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const raw = String(lines[i] || '').trim();
+      if (!raw) continue;
+
+      if (!current) {
+        current = raw;
+        continue;
+      }
+
+      const hasUnclosed = this.hasUnclosedParen(current);
+      const endsWithConnector = this.hasTrailingConnector(current);
+      const startsWithContinuation = this.hasLeadingContinuation(raw);
+      const startsWithBrand = this.startsWithBrandOrSeries(raw);
+      const isShortCode = /^[A-Z0-9-]{3,12}$/i.test(raw);
+
+      if (hasUnclosed || endsWithConnector || startsWithContinuation || isShortCode || (!startsWithBrand && !/^[A-Z][a-z]+ [A-Z]/.test(raw) && (current.length < 30 || /,\s*$/.test(current)))) {
+        if (current.endsWith('-') || current.endsWith('–')) {
+          current += raw;
+        } else if (isShortCode && !current.endsWith(',')) {
+          current += ', ' + raw;
+        } else {
+          current += ' ' + raw;
+        }
+      } else {
+        result.push(current);
+        current = raw;
+      }
+    }
+
+    if (current) {
+      result.push(current);
+    }
+    return result;
+  }
+
+  extractBasePrefix(firstPart) {
+    const dashMatch = firstPart.match(/^(.+?)\s*[–—]\s*([A-Z0-9].*)$/i);
+    if (dashMatch) {
+      const pre = dashMatch[1].replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+      if (pre.length >= 3) return pre;
+    }
+
+    const hpCodeMatch = firstPart.match(/^(.+?\b\d{2}-)([A-Z0-9]+.*)$/i);
+    if (hpCodeMatch) {
+      return hpCodeMatch[1];
+    }
+
+    const codeMatch = firstPart.match(/^(.+?\b(?:Latitude|Inspiron|Vostro|XPS|Precision|IdeaPad|ThinkPad|ProBook|EliteBook|Modern|Prestige|ExpertBook|ZenBook|VivoBook|Legion|LOQ|Pavilion|Envy|Victus|Omen|Blade|Surface|MacBook)(?:\s+\d{1,2})?)\s+[A-Z0-9-]+(?:\s*\(.*?\))?$/i);
+    if (codeMatch) {
+      return codeMatch[1].trim();
+    }
+
+    const words = firstPart.trim().split(/\s+/);
+    if (words.length >= 3 && /^[A-Z0-9-]{3,10}$/i.test(words[words.length - 1].replace(/\([^)]*\)/g, ''))) {
+      return words.slice(0, -1).join(' ');
+    }
+    return words.slice(0, Math.min(2, words.length)).join(' ');
+  }
+
   expandSubModels(entry) {
     const clean = String(entry || '').trim().replace(/[,;]+$/, '').trim();
 
@@ -619,29 +703,33 @@ class ModelChecker {
     // e.g. "HP EliteBook 840 G3, 840 G4, 840 G5"
     // e.g. "HP 15-fc Series, 15-fd Series"
     // e.g. "hp 250 g10 , 255 g1"
+    // e.g. "HP Pavilion 15-CS3063CL, CS2034TU, Cs2056, CS3060TX..."
+    // e.g. "Lenovo IdeaPad Slim 3 (15-inch, Gen8, Gen9) – 15IAH8 (83ER), 15IRH8..."
     if (textWithoutParenCommas.includes(',')) {
       const parts = textWithoutParenCommas.split(/\s*,\s*/).map(p => p.replace(/__COMMA__/g, ',').trim());
       if (parts.length > 1) {
         const firstPart = parts[0];
-        const prefixWords = firstPart.split(/\s+/);
-        if (prefixWords.length >= 2) {
-          const subModels = [];
-          let allMatched = true;
-          for (let i = 0; i < parts.length; i++) {
-            const p = parts[i].trim();
-            if (p.toLowerCase().startsWith(prefixWords[0].toLowerCase())) {
-              subModels.push(p);
-            } else if (/^\d{3,4}\s*G\d/i.test(p) && prefixWords.length >= 3) {
-              subModels.push(`${prefixWords[0]} ${prefixWords[1]} ${p}`.trim());
-            } else if (/^G\d/i.test(p)) {
-              subModels.push(`${firstPart.replace(/G\d.*$/, '')}${p}`.trim());
-            } else {
-              subModels.push(`${prefixWords[0]} ${p}`.trim());
-            }
+        const basePrefix = this.extractBasePrefix(firstPart);
+        const subModels = [];
+
+        for (let i = 0; i < parts.length; i++) {
+          const p = parts[i].trim();
+          if (i === 0) {
+            subModels.push(p);
+          } else if (p.toLowerCase().startsWith(basePrefix.toLowerCase())) {
+            subModels.push(p);
+          } else if (/^\d{3,4}\s*G\d/i.test(p) && basePrefix.split(/\s+/).length >= 2) {
+            subModels.push(`${basePrefix} ${p}`.trim());
+          } else if (/^G\d/i.test(p)) {
+            subModels.push(`${firstPart.replace(/G\d.*$/, '')}${p}`.trim());
+          } else if (basePrefix.endsWith('-')) {
+            subModels.push(`${basePrefix}${p}`.trim());
+          } else {
+            subModels.push(`${basePrefix} ${p}`.trim());
           }
-          if (allMatched && subModels.length > 1) {
-            return subModels;
-          }
+        }
+        if (subModels.length > 1) {
+          return subModels;
         }
       }
     }
@@ -670,9 +758,10 @@ class ModelChecker {
 
   cleanList(rawList) {
     if (!rawList || !Array.isArray(rawList)) return [];
+    const stitched = this.stitchContinuationLines(rawList);
     const seen = new Set();
     const clean = [];
-    for (const item of rawList) {
+    for (const item of stitched) {
       const trimmed = String(item || '').trim().replace(/\s+/g, ' ');
       if (!trimmed || /^(Acer\s+Asus\s+Dell|Brand|Model|Laptop|Catalog)/i.test(trimmed)) continue;
 
@@ -954,7 +1043,8 @@ class ModelChecker {
     if (!text || typeof text !== 'string') return;
 
     const rawLines = text.split(/\r?\n/);
-    this.catalogLines = this.cleanList(rawLines);
+    const stitched = this.stitchContinuationLines(rawLines);
+    this.catalogLines = this.cleanList(stitched);
 
     for (const line of this.catalogLines) {
       const norm = this.normalizeModel(line);
@@ -1040,8 +1130,9 @@ class ModelChecker {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
         let pageText = '';
-        let lastY = null;
+        let currentCell = '';
         let lastX = null;
+        let lastY = null;
         let lastWidth = 0;
 
         for (const item of content.items) {
@@ -1049,26 +1140,60 @@ class ModelChecker {
           const x = item.transform[4];
           const y = item.transform[5];
           const width = item.width || 0;
+          const text = item.str.trim();
 
-          // When vertical coordinate changes by more than 5pt, emit a newline
-          if (lastY !== null && Math.abs(y - lastY) > 5) {
-            pageText += '\n';
-          } else if (lastX !== null && (x < lastX || (x - (lastX + lastWidth)) > 12)) {
-            // Horizontal column jump on the same row! Emit a newline so table columns never merge!
-            pageText += '\n';
-          } else if (pageText && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
-            pageText += ' ';
+          // Skip top brand header row on page 1 if present
+          if (y > 548 && i === 1 && /^(Acer|Asus|Dell|Macbook|Brand)/i.test(text)) continue;
+
+          if (lastX === null) {
+            currentCell = text;
+            lastX = x;
+            lastY = y;
+            lastWidth = width;
+            continue;
           }
-          pageText += item.str;
-          if (item.hasEOL) {
-            pageText += '\n';
+
+          const dx = Math.abs(x - lastX);
+          const dy = lastY - y;
+
+          // In this PDF, columns are ~69pt apart. If dx >= 25, it jumped to another column or row!
+          const isColumnJump = dx >= 25;
+          let isContinuation = false;
+
+          if (!isColumnJump) {
+            // Same column!
+            if (dy >= 2 && dy <= 5.5) {
+              isContinuation = true;
+            } else if (this.hasUnclosedParen(currentCell) || this.hasTrailingConnector(currentCell) || this.hasLeadingContinuation(text)) {
+              isContinuation = true;
+            } else if (!this.startsWithBrandOrSeries(text) && dy < 15) {
+              isContinuation = true;
+            }
           }
-          lastY = y;
+
+          if (isContinuation) {
+            if (currentCell.endsWith('-') || currentCell.endsWith('–')) {
+              currentCell += text;
+            } else {
+              currentCell += ' ' + text;
+            }
+          } else {
+            if (currentCell.trim()) {
+              pageText += currentCell.trim() + '\n';
+            }
+            currentCell = text;
+          }
+
           lastX = x;
+          lastY = y;
           lastWidth = width;
         }
 
-        fullText += pageText + '\n';
+        if (currentCell.trim()) {
+          pageText += currentCell.trim() + '\n';
+        }
+
+        fullText += pageText;
         this.pdfStatus.textContent = `Extracting page ${i}/${pdf.numPages}...`;
       }
 

@@ -269,6 +269,95 @@ def isolate_matching_chunk(line: str, q: dict) -> str:
     return chunks[0]
 
 
+def has_unclosed_paren(s: str) -> bool:
+    return s.count("(") > s.count(")")
+
+
+def has_trailing_connector(s: str) -> bool:
+    s = s.strip()
+    return bool(re.search(r"[-–—,/]$", s) or re.search(r",\s*$", s))
+
+
+def has_leading_continuation(s: str) -> bool:
+    s = s.strip()
+    return bool(re.match(r"^[)\];,–—]", s) or re.match(r"^(and|or|Series|Gen\s*\d|G\d|\(20\d\d\)|\(P\d+)", s, re.I))
+
+
+def starts_with_brand_or_series(s: str) -> bool:
+    first_word = re.split(r"[\s-]+", s.strip())[0].upper()
+    all_brands = set(BRANDS) | {s.upper() for s in BRAND_AND_SERIES}
+    return first_word in all_brands
+
+
+def stitch_continuation_lines(lines: List[str]) -> List[str]:
+    if not lines:
+        return []
+    result = []
+    current = ""
+
+    for line in lines:
+        raw = str(line or "").strip()
+        if not raw:
+            continue
+
+        if not current:
+            current = raw
+            continue
+
+        has_unclosed = has_unclosed_paren(current)
+        ends_with_conn = has_trailing_connector(current)
+        starts_with_cont = has_leading_continuation(raw)
+        starts_with_brand = starts_with_brand_or_series(raw)
+        is_short_code = bool(re.match(r"^[A-Z0-9-]{3,12}$", raw, re.I))
+
+        if (
+            has_unclosed
+            or ends_with_conn
+            or starts_with_cont
+            or is_short_code
+            or (not starts_with_brand and not re.match(r"^[A-Z][a-z]+ [A-Z]", raw) and (len(current) < 30 or current.endswith(",")))
+        ):
+            if current.endswith("-") or current.endswith("–"):
+                current += raw
+            elif is_short_code and not current.endswith(","):
+                current += f", {raw}"
+            else:
+                current += f" {raw}"
+        else:
+            result.append(current)
+            current = raw
+
+    if current:
+        result.append(current)
+    return result
+
+
+def extract_base_prefix(first_part: str) -> str:
+    dash_match = re.match(r"^(.+?)\s*[–—]\s*([A-Z0-9].*)$", first_part, re.I)
+    if dash_match:
+        pre = re.sub(r"\([^)]*\)", "", dash_match.group(1))
+        pre = re.sub(r"\s+", " ", pre).strip()
+        if len(pre) >= 3:
+            return pre
+
+    hp_code_match = re.match(r"^(.+?\b\d{2}-)([A-Z0-9]+.*)$", first_part, re.I)
+    if hp_code_match:
+        return hp_code_match.group(1)
+
+    code_match = re.match(
+        r"^(.+?\b(?:Latitude|Inspiron|Vostro|XPS|Precision|IdeaPad|ThinkPad|ProBook|EliteBook|Modern|Prestige|ExpertBook|ZenBook|VivoBook|Legion|LOQ|Pavilion|Envy|Victus|Omen|Blade|Surface|MacBook)(?:\s+\d{1,2})?)\s+[A-Z0-9-]+(?:\s*\(.*?\))?$",
+        first_part,
+        re.I,
+    )
+    if code_match:
+        return code_match.group(1).strip()
+
+    words = first_part.strip().split()
+    if len(words) >= 3 and re.match(r"^[A-Z0-9-]{3,10}$", re.sub(r"\([^)]*\)", "", words[-1]), re.I):
+        return " ".join(words[:-1])
+    return " ".join(words[: min(2, len(words))])
+
+
 def expand_sub_models(entry: str) -> list:
     clean = re.sub(r"[,;]+$", "", str(entry or "").strip()).strip()
     text_without_paren = re.sub(r"\([^)]*\)", lambda m: m.group(0).replace(",", "__COMMA__"), clean)
@@ -293,23 +382,25 @@ def expand_sub_models(entry: str) -> list:
         parts = [p.replace("__COMMA__", ",").strip() for p in text_without_paren.split(",")]
         if len(parts) > 1:
             first_part = parts[0]
-            prefix_words = first_part.split()
-            if len(prefix_words) >= 2:
-                sub_models = []
-                all_matched = True
-                for p in parts:
-                    p = p.strip()
-                    if p.lower().startswith(prefix_words[0].lower()):
-                        sub_models.append(p)
-                    elif re.match(r"^\d{3,4}\s*G\d", p, re.I) and len(prefix_words) >= 3:
-                        sub_models.append(f"{prefix_words[0]} {prefix_words[1]} {p}".strip())
-                    elif re.match(r"^G\d", p, re.I):
-                        base_p = re.sub(r"G\d.*$", "", first_part)
-                        sub_models.append(f"{base_p}{p}".strip())
-                    else:
-                        sub_models.append(f"{prefix_words[0]} {p}".strip())
-                if all_matched and len(sub_models) > 1:
-                    return sub_models
+            base_prefix = extract_base_prefix(first_part)
+            sub_models = []
+            for i, p in enumerate(parts):
+                p = p.strip()
+                if i == 0:
+                    sub_models.append(p)
+                elif p.lower().startswith(base_prefix.lower()):
+                    sub_models.append(p)
+                elif re.match(r"^\d{3,4}\s*G\d", p, re.I) and len(base_prefix.split()) >= 2:
+                    sub_models.append(f"{base_prefix} {p}".strip())
+                elif re.match(r"^G\d", p, re.I):
+                    base_p = re.sub(r"G\d.*$", "", first_part)
+                    sub_models.append(f"{base_p}{p}".strip())
+                elif base_prefix.endswith("-"):
+                    sub_models.append(f"{base_prefix}{p}".strip())
+                else:
+                    sub_models.append(f"{base_prefix} {p}".strip())
+            if len(sub_models) > 1:
+                return sub_models
 
     # Pattern 3: Hyphenated pair
     m3 = re.match(r"^(.+?)\s+(\d{2}[A-Z0-9]{3,7})\s*-\s*(\d{2}[A-Z0-9]{3,7})$", clean, re.I)
@@ -328,7 +419,8 @@ def expand_sub_models(entry: str) -> list:
 def clean_catalog_lines(raw_catalog: List[str]) -> List[str]:
     seen = set()
     cleaned = []
-    for item in (raw_catalog or []):
+    stitched = stitch_continuation_lines(raw_catalog or [])
+    for item in stitched:
         trimmed = re.sub(r"\s+", " ", str(item or "").strip())
         if not trimmed or re.match(r"^(Acer\s+Asus\s+Dell|Brand|Model|Laptop|Catalog)", trimmed, re.I):
             continue
