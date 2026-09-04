@@ -712,6 +712,47 @@ textarea:focus {
   line-height: 1.5;
 }
 
+.confirmed-model-card {
+  margin-top: 14px;
+  padding: 16px 20px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.result.available .confirmed-model-card {
+  border-color: rgba(84, 240, 177, 0.28);
+  background: rgba(84, 240, 177, 0.05);
+}
+
+.result.partial .confirmed-model-card {
+  border-color: rgba(86, 232, 255, 0.28);
+  background: rgba(86, 232, 255, 0.05);
+}
+
+.result.unavailable .confirmed-model-card {
+  border-color: rgba(255, 126, 179, 0.22);
+  background: rgba(255, 126, 179, 0.04);
+}
+
+.confirmed-model-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.confirmed-model-note {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .result .match-info {
   margin-top: 8px;
   color: var(--text-muted);

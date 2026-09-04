@@ -16,34 +16,34 @@ if ('caches' in window) {
 }
 
 const SERIES_PATTERNS = [
-  { name: 'MacBook Air', regex: /\b(?:MACBOOK\s*AIR|MBA)\b/i },
-  { name: 'MacBook Pro', regex: /\b(?:MACBOOK\s*PRO|MBP)\b/i },
+  { name: 'MacBook Air', regex: /\b(?:MACBOOK[\s-]*AIR|MBA)\b/i },
+  { name: 'MacBook Pro', regex: /\b(?:MACBOOK[\s-]*PRO|MBP)\b/i },
   { name: 'MacBook', regex: /\bMACBOOK\b/i },
-  { name: 'Surface Laptop', regex: /\bSURFACE\s*LAPTOP\b/i },
-  { name: 'Surface Pro', regex: /\bSURFACE\s*PRO\b/i },
-  { name: 'Surface Book', regex: /\bSURFACE\s*BOOK\b/i },
+  { name: 'Surface Laptop', regex: /\bSURFACE[\s-]*LAPTOP\b/i },
+  { name: 'Surface Pro', regex: /\bSURFACE[\s-]*PRO\b/i },
+  { name: 'Surface Book', regex: /\bSURFACE[\s-]*BOOK\b/i },
   { name: 'Surface', regex: /\bSURFACE\b/i },
-  { name: 'ThinkPad X1 Carbon', regex: /\b(?:THINKPAD\s*)?X1\s*CARBON\b/i },
-  { name: 'ThinkPad X1 Yoga', regex: /\b(?:THINKPAD\s*)?X1\s*YOGA\b/i },
+  { name: 'ThinkPad X1 Carbon', regex: /\b(?:THINKPAD[\s-]*)?X1[\s-]*CARBON\b/i },
+  { name: 'ThinkPad X1 Yoga', regex: /\b(?:THINKPAD[\s-]*)?X1[\s-]*YOGA\b/i },
   { name: 'ThinkPad', regex: /\bTHINKPAD\b/i },
-  { name: 'IdeaPad Flex', regex: /\bIDEAPAD\s*FLEX\b/i },
-  { name: 'IdeaPad Gaming', regex: /\bIDEAPAD\s*GAMING\b/i },
-  { name: 'IdeaPad Slim', regex: /\bIDEAPAD\s*SLIM\b/i },
+  { name: 'IdeaPad Flex', regex: /\bIDEAPAD[\s-]*FLEX\b/i },
+  { name: 'IdeaPad Gaming', regex: /\bIDEAPAD[\s-]*GAMING\b/i },
+  { name: 'IdeaPad Slim', regex: /\bIDEAPAD[\s-]*SLIM\b/i },
   { name: 'IdeaPad', regex: /\bIDEAPAD\b/i },
   { name: 'Legion', regex: /\bLEGION\b/i },
   { name: 'LOQ', regex: /\bLOQ\b/i },
   { name: 'Yoga', regex: /\bYOGA\b/i },
-  { name: 'EliteBook Folio', regex: /\bELITEBOOK\s*FOLIO\b/i },
-  { name: 'EliteBook x360', regex: /\bELITEBOOK\s*X360\b/i },
+  { name: 'EliteBook Folio', regex: /\bELITEBOOK[\s-]*FOLIO\b/i },
+  { name: 'EliteBook x360', regex: /\bELITEBOOK[\s-]*X360\b/i },
   { name: 'EliteBook', regex: /\bELITEBOOK\b/i },
-  { name: 'ProBook x360', regex: /\bPROBOOK\s*X360\b/i },
+  { name: 'ProBook x360', regex: /\bPROBOOK[\s-]*X360\b/i },
   { name: 'ProBook', regex: /\bPROBOOK\b/i },
-  { name: 'Pavilion Aero', regex: /\bPAVILION\s*AERO\b/i },
-  { name: 'Pavilion x360', regex: /\bPAVILION\s*X360\b/i },
+  { name: 'Pavilion Aero', regex: /\bPAVILION[\s-]*AERO\b/i },
+  { name: 'Pavilion x360', regex: /\bPAVILION[\s-]*X360\b/i },
   { name: 'Pavilion', regex: /\bPAVILION\b/i },
-  { name: 'Envy x360', regex: /\bENVY\s*X360\b/i },
+  { name: 'Envy x360', regex: /\bENVY[\s-]*X360\b/i },
   { name: 'Envy', regex: /\bENVY\b/i },
-  { name: 'Spectre x360', regex: /\bSPECTRE\s*X360\b/i },
+  { name: 'Spectre x360', regex: /\bSPECTRE[\s-]*X360\b/i },
   { name: 'Spectre', regex: /\bSPECTRE\b/i },
   { name: 'Victus', regex: /\bVICTUS\b/i },
   { name: 'Omen', regex: /\bOMEN\b/i },
@@ -52,27 +52,27 @@ const SERIES_PATTERNS = [
   { name: 'Vostro', regex: /\bVOSTRO\b/i },
   { name: 'XPS', regex: /\bXPS\b/i },
   { name: 'Precision', regex: /\bPRECISION\b/i },
-  { name: 'VivoBook S', regex: /\bVIVOBOOK\s*S\b/i },
-  { name: 'VivoBook Pro', regex: /\bVIVOBOOK\s*PRO\b/i },
-  { name: 'VivoBook Go', regex: /\bVIVOBOOK\s*GO\b/i },
+  { name: 'VivoBook S', regex: /\bVIVOBOOK[\s-]*S\b/i },
+  { name: 'VivoBook Pro', regex: /\bVIVOBOOK[\s-]*PRO\b/i },
+  { name: 'VivoBook Go', regex: /\bVIVOBOOK[\s-]*GO\b/i },
   { name: 'VivoBook', regex: /\bVIVOBOOK\b/i },
   { name: 'ZenBook', regex: /\bZENBOOK\b/i },
-  { name: 'TUF Gaming', regex: /\bTUF\s*GAMING\b/i },
-  { name: 'TUF Dash', regex: /\bTUF\s*DASH\b/i },
+  { name: 'TUF Gaming', regex: /\bTUF[\s-]*GAMING\b/i },
+  { name: 'TUF Dash', regex: /\bTUF[\s-]*DASH\b/i },
   { name: 'TUF', regex: /\bTUF\b/i },
-  { name: 'ROG Zephyrus', regex: /\bROG\s*ZEPHYRUS\b/i },
-  { name: 'ROG Strix', regex: /\bROG\s*STRIX\b/i },
+  { name: 'ROG Zephyrus', regex: /\bROG[\s-]*ZEPHYRUS\b/i },
+  { name: 'ROG Strix', regex: /\bROG[\s-]*STRIX\b/i },
   { name: 'ROG', regex: /\bROG\b/i },
   { name: 'ExpertBook', regex: /\bEXPERTBOOK\b/i },
-  { name: 'Aspire 1', regex: /\bASPIRE\s*1\b/i },
-  { name: 'Aspire 3', regex: /\bASPIRE\s*3\b/i },
-  { name: 'Aspire 5', regex: /\bASPIRE\s*5\b/i },
-  { name: 'Aspire 7', regex: /\bASPIRE\s*7\b/i },
+  { name: 'Aspire 1', regex: /\bASPIRE[\s-]*1\b/i },
+  { name: 'Aspire 3', regex: /\bASPIRE[\s-]*3\b/i },
+  { name: 'Aspire 5', regex: /\bASPIRE[\s-]*5\b/i },
+  { name: 'Aspire 7', regex: /\bASPIRE[\s-]*7\b/i },
   { name: 'Aspire', regex: /\bASPIRE\b/i },
-  { name: 'Nitro 5', regex: /\bNITRO\s*5\b/i },
+  { name: 'Nitro 5', regex: /\bNITRO[\s-]*5\b/i },
   { name: 'Nitro', regex: /\bNITRO\b/i },
-  { name: 'Predator Helios Neo', regex: /\bPREDATOR\s*HELIOS\s*NEO\b/i },
-  { name: 'Predator Helios', regex: /\bPREDATOR\s*HELIOS\b/i },
+  { name: 'Predator Helios Neo', regex: /\bPREDATOR[\s-]*HELIOS[\s-]*NEO\b/i },
+  { name: 'Predator Helios', regex: /\bPREDATOR[\s-]*HELIOS\b/i },
   { name: 'Predator', regex: /\bPREDATOR\b/i },
   { name: 'Swift', regex: /\bSWIFT\b/i },
   { name: 'Modern', regex: /\bMODERN\b/i },
@@ -220,10 +220,19 @@ class ModelChecker {
       }
     }
 
+    // Identify Brand
+    let brand = '';
+    for (const b of BRANDS) {
+      if (new RegExp(`\\b${b}\\b`, 'i').test(norm)) {
+        brand = b;
+        break;
+      }
+    }
+
     // Check if text is solely a series or brand (e.g. "ThinkPad", "Dell Inspiron")
     let cleanRemaining = norm;
-    for (const brand of BRANDS) {
-      cleanRemaining = cleanRemaining.replace(new RegExp(`\\b${brand}\\b`, 'gi'), '');
+    for (const b of BRANDS) {
+      cleanRemaining = cleanRemaining.replace(new RegExp(`\\b${b}\\b`, 'gi'), '');
     }
     if (series) {
       cleanRemaining = cleanRemaining.replace(new RegExp(series, 'gi'), '');
@@ -304,19 +313,46 @@ class ModelChecker {
       if (!baseCode) baseCode = tm;
     }
 
+    // Single digit model if cleanRemaining is pure digit (e.g. 3 in Surface Laptop 3)
+    const singleDigitMatch = this.compact(cleanRemaining).match(/^\d$/);
+    if (singleDigitMatch) {
+      codes.add(singleDigitMatch[0]);
+      if (!baseCode) baseCode = singleDigitMatch[0];
+    }
+
+    // 2-digit family / screen tokens (e.g. 74 in Latitude 74, 15 in LOQ 15 / Inspiron 15, 14 in Inspiron 14, 54 in Latitude 54)
+    const twoDigitMatches = cleanNorm.match(/\b(\d{2})\b/g) || [];
+    const familyNumbers = [];
+    for (const dm of twoDigitMatches) {
+      if (!/^(19|20)$/.test(dm)) {
+        familyNumbers.push(dm);
+      }
+    }
+
     const primaryNumeric = baseCode || (codes.size > 0 ? Array.from(codes)[0] : '');
+
+    const hasExactCode = Boolean(
+      Array.from(codes).some(c => c.length >= 4 || /[A-Z]\d|\d[A-Z]/i.test(c)) ||
+      (threeDigitMatches.length > 0 && Boolean(gen)) ||
+      (Boolean(series) && Boolean(gen)) ||
+      (Boolean(series) && Boolean(singleDigitMatch))
+    );
 
     return {
       raw: text,
       norm,
       comp,
+      brand: brand.toUpperCase(),
       series: series.toUpperCase(),
       isSeriesOnly,
       gen: gen.toUpperCase(),
       numeric: primaryNumeric.toUpperCase(),
       baseCode: baseCode.toUpperCase(),
       suffix: suffix.toUpperCase(),
-      codes: Array.from(codes).map(c => c.toUpperCase())
+      codes: Array.from(codes).map(c => c.toUpperCase()),
+      familyNumbers,
+      cleanRemaining: this.compact(cleanRemaining),
+      hasExactCode
     };
   }
 
@@ -338,7 +374,6 @@ class ModelChecker {
       } else if (c.series.includes(q.series) || q.series.includes(c.series)) {
         score += 20;
       } else {
-        // Conflicting series (e.g. ThinkPad vs IdeaPad, or EliteBook vs Pavilion)
         return { score: -100, numericMatched: false, suffixConflict: false, genConflict: false };
       }
     }
@@ -361,14 +396,12 @@ class ModelChecker {
           score += 35;
           numericMatched = true;
         }
-        // Check suffix conflict
         if (q.suffix) {
           if (c.suffix && c.suffix === q.suffix) {
             score += 25;
           } else if (c.comp.includes(q.suffix)) {
             score += 20;
           } else {
-            // User asked for specific suffix (e.g. 99 or IU), catalog has different suffix (58 or LH)
             suffixConflict = true;
           }
         }
@@ -383,7 +416,6 @@ class ModelChecker {
           numericMatched = true;
         }
       } else {
-        // Conflicting generation (e.g. G2 vs G3, M3 vs M2)
         genConflict = true;
       }
     } else if (q.gen && c.comp.includes(q.gen)) {
@@ -406,94 +438,173 @@ class ModelChecker {
     return { score, numericMatched, suffixConflict, genConflict };
   }
 
-  classify(query, catalogVariants) {
+  cleanList(rawList) {
+    if (!rawList || !Array.isArray(rawList)) return [];
+    const seen = new Set();
+    const clean = [];
+    for (const item of rawList) {
+      const trimmed = String(item || '').trim().replace(/\s+/g, ' ').replace(/[,;]+$/, '').trim();
+      const comp = this.compact(trimmed);
+      if (comp.length >= 2 && !seen.has(comp)) {
+        seen.add(comp);
+        clean.push(trimmed);
+      }
+    }
+    return clean;
+  }
+
+  smartClassify(query, rawCatalog) {
+    const catalog = this.cleanList(rawCatalog);
     const q = this.extractKeys(query);
+
     if (!q.comp) {
-      return { category: 'UNAVAILABLE', bestMatch: '', matches: [] };
+      return {
+        status: 'UNAVAILABLE',
+        isExactMatch: false,
+        matchedModel: '',
+        variants: [],
+        reasoning: 'Please enter a model name.'
+      };
     }
 
-    // If user only typed a series name without a model code (e.g. "ThinkPad" or "Inspiron")
-    if (q.isSeriesOnly) {
-      const seriesMatches = [];
-      for (const rawVariant of catalogVariants) {
-        const c = this.extractKeys(rawVariant);
-        if (c.series && (c.series === q.series || c.series.includes(q.series) || q.series.includes(c.series))) {
-          seriesMatches.push(rawVariant);
-        }
-      }
-      if (seriesMatches.length > 0) {
-        return {
-          category: 'UNCERTAIN',
-          bestMatch: seriesMatches[0],
-          matches: seriesMatches.slice(0, 10),
-          note: `Multiple models found for ${q.series}. Please specify your exact model number.`
-        };
-      }
-    }
+    // 1. Check for exact match first
+    let exactMatchLine = null;
+    const partialConflictMatches = [];
 
-    let best = null;
-    let bestScored = null;
-    const partialMatches = [];
-    const exactMatches = [];
+    for (const line of catalog) {
+      const c = this.extractKeys(line);
 
-    for (const rawVariant of catalogVariants) {
-      const c = this.extractKeys(rawVariant);
+      // Brand and series consistency
+      if (q.brand && c.brand && q.brand !== c.brand) continue;
+      if (q.series && c.series && q.series !== c.series && !c.series.includes(q.series) && !q.series.includes(c.series)) continue;
+
       const res = this.matchScore(q, c);
 
       if (res.score > 0) {
-        // Apply Suffix / Generation Conflict Hard Rule:
-        if (res.genConflict || res.suffixConflict) {
-          partialMatches.push({ variant: rawVariant, c, res });
-        } else if (res.numericMatched) {
-          exactMatches.push({ variant: rawVariant, c, res });
-        } else {
-          partialMatches.push({ variant: rawVariant, c, res });
-        }
-
-        if (!bestScored || res.score > bestScored.score) {
-          best = rawVariant;
-          bestScored = res;
+        if ((res.genConflict || res.suffixConflict) && res.numericMatched) {
+          partialConflictMatches.push(line);
+        } else if (res.numericMatched && q.hasExactCode && !res.genConflict && !res.suffixConflict) {
+          if (!q.series || c.series === q.series || c.series.includes(q.series)) {
+            exactMatchLine = line;
+            break;
+          }
         }
       }
     }
 
-    exactMatches.sort((a, b) => b.res.score - a.res.score);
-    partialMatches.sort((a, b) => b.res.score - a.res.score);
+    if (!exactMatchLine && q.hasExactCode) {
+      for (const line of catalog) {
+        const c = this.extractKeys(line);
+        if (q.brand && c.brand && q.brand !== c.brand) continue;
+        if (q.series && c.series && q.series !== c.series) continue;
+        const allCodesMatch = q.codes.length > 0 && q.codes.every(code => c.comp.includes(code));
+        if (allCodesMatch) {
+          if (q.gen && c.gen && q.gen !== c.gen) continue;
+          exactMatchLine = line;
+          break;
+        }
+      }
+    }
 
-    if (exactMatches.length > 0) {
+    // Exact match found:
+    // "eita shodu amake exact model ta dekhabo je available ase kina . jodi thake thaole bolbe and show korbe je ase extra ar kiso na"
+    if (exactMatchLine) {
       return {
-        category: 'AVAILABLE',
-        bestMatch: exactMatches[0].variant,
-        matches: exactMatches.map(m => m.variant),
-        note: 'Exact model code & series confirmed in catalog stock.'
+        status: 'AVAILABLE',
+        isExactMatch: true,
+        matchedModel: exactMatchLine,
+        variants: [], // Extra nothing!
+        reasoning: `Model "${query.trim()}" is available in stock.`
       };
     }
 
-    if (partialMatches.length > 0) {
+    // 2. Partial Conflict: user searched specific gen or suffix (e.g. 840 G2) that doesn't exist, but same model exists (840 G3, G4...)
+    if (partialConflictMatches.length > 0) {
       return {
-        category: 'PARTIAL',
-        bestMatch: partialMatches[0].variant,
-        matches: partialMatches.map(m => m.variant),
-        note: 'A related model exists in stock, but the specific generation or suffix differs.'
+        status: 'PARTIAL',
+        isExactMatch: false,
+        matchedModel: partialConflictMatches[0],
+        variants: partialConflictMatches,
+        reasoning: `The exact model "${query.trim()}" was not found, but other variants of this model are in stock:`
       };
     }
 
-    // Direct line substring fallback
-    const directLine = catalogVariants.find(line => this.compact(line).includes(q.comp));
-    if (directLine) {
+    // 3. User typed a model/family without specific variant:
+    // "jodi emon hoye ami emon ekta model er nam leksi jeita ar onk gola varient ase kinto ami type kori nai kinto pdf e ase . tahole oita same model er baki varient gola show korbe . onno kono model er na"
+    const sameModelVariants = [];
+    const seenVariants = new Set();
+
+    for (const line of catalog) {
+      const c = this.extractKeys(line);
+
+      // Rule A: Brand mismatch check
+      if (q.brand && c.brand && q.brand !== c.brand) continue;
+
+      // Rule B: Series match (if user specified a series, like Latitude, LOQ, Inspiron, Aspire 3, etc.)
+      if (q.series) {
+        const seriesMatch = Boolean(c.series) && (c.series === q.series || c.series.includes(q.series) || q.series.includes(c.series));
+        if (!seriesMatch) continue;
+      }
+
+      // Rule C: Number / Family match (e.g. 74 in Latitude 74, 15 in LOQ 15, 840 in EliteBook 840)
+      if (q.familyNumbers.length > 0) {
+        const numberMatches = q.familyNumbers.every(fn => {
+          return c.comp.includes(fn) || c.codes.some(code => code.includes(fn));
+        });
+        if (!numberMatches) continue;
+      }
+
+      // Rule D: Base code match (e.g. 840 in EliteBook 840)
+      if (q.baseCode && q.baseCode.length >= 3) {
+        const baseMatch = c.codes.some(code => code.startsWith(q.baseCode) || code === q.baseCode) || c.comp.includes(q.baseCode);
+        if (!baseMatch) continue;
+      }
+
+      // Check query tokens
+      const qTokens = q.norm.split(/\s+/).filter(t => t.length >= 2 && !BRANDS.includes(t));
+      const tokenMatches = qTokens.every(t => c.norm.includes(t) || c.comp.includes(t));
+      if (q.series || tokenMatches) {
+        const k = this.compact(line);
+        if (!seenVariants.has(k)) {
+          seenVariants.add(k);
+          sameModelVariants.push(line);
+        }
+      }
+    }
+
+    if (sameModelVariants.length > 0) {
       return {
-        category: 'AVAILABLE',
-        bestMatch: directLine,
-        matches: [directLine],
-        note: 'Exact model text matched in catalog.'
+        status: 'VARIANTS',
+        isExactMatch: false,
+        matchedModel: `${q.series || query.trim()} Variants`,
+        variants: sameModelVariants,
+        reasoning: `Multiple variants found for "${query.trim()}". Available options:`
       };
     }
 
+    // 4. Unavailable
     return {
-      category: 'UNAVAILABLE',
-      bestMatch: '',
-      matches: [],
-      note: 'Model was not found in the uploaded catalog.'
+      status: 'UNAVAILABLE',
+      isExactMatch: false,
+      matchedModel: '',
+      variants: [],
+      reasoning: `Model "${query.trim()}" was not found in the uploaded catalog.`
+    };
+  }
+
+  classify(query, catalogVariants) {
+    const res = this.smartClassify(query, catalogVariants);
+    const categoryMap = {
+      AVAILABLE: 'AVAILABLE',
+      VARIANTS: 'PARTIAL',
+      PARTIAL: 'PARTIAL',
+      UNAVAILABLE: 'UNAVAILABLE'
+    };
+    return {
+      category: categoryMap[res.status] || 'UNAVAILABLE',
+      bestMatch: res.matchedModel,
+      matches: res.variants.length > 0 ? res.variants : (res.matchedModel ? [res.matchedModel] : []),
+      note: res.reasoning
     };
   }
 
@@ -554,11 +665,15 @@ class ModelChecker {
 
     if (!text || typeof text !== 'string') return;
 
-    // Preserve non-empty lines from PDF
+    // Preserve non-empty lines from PDF without duplicates or trailing punctuation
+    const seenLines = new Set();
     const rawLines = text.split(/\r?\n/);
     for (const rawLine of rawLines) {
-      const trimmed = rawLine.trim().replace(/\s+/g, ' ');
-      if (trimmed.length > 1) {
+      let trimmed = rawLine.trim().replace(/\s+/g, ' ');
+      trimmed = trimmed.replace(/[,;]+$/, '').trim();
+      const comp = this.compact(trimmed);
+      if (comp.length > 2 && !seenLines.has(comp)) {
+        seenLines.add(comp);
         this.catalogLines.push(trimmed);
       }
     }
@@ -623,26 +738,54 @@ class ModelChecker {
     }
   }
 
+  getCleanCatalog() {
+    const rawList = this.catalogLines.length > 0
+      ? this.catalogLines
+      : Array.from(this.models).map(m => this.displayModel(m));
+    const seen = new Set();
+    const cleanList = [];
+    for (const item of rawList) {
+      const clean = String(item || '').replace(/[,;]+$/, '').trim();
+      const k = this.compact(clean);
+      if (k.length >= 2 && !seen.has(k)) {
+        seen.add(k);
+        cleanList.push(clean);
+      }
+    }
+    return cleanList;
+  }
+
   displayModel(model) {
     return this.modelLabels.get(model) || model;
   }
 
   findLocalMatches(query) {
     if (!query) return [];
-    const catalogVariants = this.catalogLines.length > 0
-      ? this.catalogLines
-      : Array.from(this.models).map(m => this.displayModel(m));
-    const res = this.classify(query, catalogVariants);
-    return res.matches.length > 0 ? res.matches : (res.bestMatch ? [res.bestMatch] : []);
+    const catalog = this.getCleanCatalog();
+    const res = this.smartClassify(query, catalog);
+    if (res.isExactMatch && res.matchedModel) return [res.matchedModel];
+    return res.variants.length > 0 ? res.variants : (res.matchedModel ? [res.matchedModel] : []);
   }
 
   renderCatalogMatches(matches, title = 'PDF catalog matches') {
     if (!matches || !matches.length) return '';
+    const seen = new Set();
+    const uniqueList = [];
+    for (const m of matches) {
+      const clean = String(m || '').replace(/[,;]+$/, '').trim();
+      const k = this.compact(clean);
+      if (k.length >= 2 && !seen.has(k)) {
+        seen.add(k);
+        uniqueList.push(clean);
+      }
+    }
+    if (!uniqueList.length) return '';
+
     return `
       <div class="catalog-options">
-        <div class="options-title">${title} <span>${matches.length}</span></div>
+        <div class="options-title">${title} <span>${uniqueList.length}</span></div>
         <div class="catalog-list">
-          ${matches.map((model, index) => `
+          ${uniqueList.map((model, index) => `
             <div class="catalog-option" style="--option-index: ${index};" onclick="window.modelChecker && window.modelChecker.selectCatalogOption('${this.escapeHtml(model).replace(/'/g, "\\'")}')">
               <span class="option-number">${String(index + 1).padStart(2, '0')}</span>
               <span class="option-name">${this.escapeHtml(model)}</span>
@@ -730,61 +873,45 @@ class ModelChecker {
     this.searchResult.className = 'result loading';
     this.searchResult.innerHTML = '<div>Evaluating catalog variants...</div>';
 
-    // Prioritize catalogLines, fallback to extracted models
-    const catalogVariants = this.catalogLines.length > 0
-      ? this.catalogLines
-      : Array.from(this.models).map(model => this.displayModel(model));
+    const catalog = this.getCleanCatalog();
+    const result = this.smartClassify(query, catalog);
 
-    const result = this.classify(query, catalogVariants);
-
-    if (result.category === 'AVAILABLE') {
+    if (result.status === 'AVAILABLE' && result.isExactMatch) {
       this.searchResult.className = 'result available';
       this.searchResult.innerHTML = `
         <div class="result-badge">✅ AVAILABLE IN CATALOG</div>
-        <div class="best-match-card">
-          <div class="best-match-header">
-            <span class="best-match-tag">Best Matching Catalog Line</span>
-            <span class="best-match-pill">100% MATCH</span>
-          </div>
-          <div class="best-match-line">${this.escapeHtml(result.bestMatch)}</div>
-          <div class="best-match-note">${this.escapeHtml(result.note || 'Exact model code & series confirmed in catalog.')}</div>
+        <div class="confirmed-model-card">
+          <div class="confirmed-model-name">${this.escapeHtml(result.matchedModel)}</div>
+          <div class="confirmed-model-note">${this.escapeHtml(result.reasoning || 'Exact model is confirmed and available in stock.')}</div>
         </div>
-        ${result.matches.length > 1 ? this.renderCatalogMatches(result.matches, 'All matching catalog variants') : ''}
       `;
-    } else if (result.category === 'PARTIAL') {
+    } else if (result.status === 'VARIANTS') {
       this.searchResult.className = 'result partial';
       this.searchResult.innerHTML = `
-        <div class="result-badge">◐ PARTIAL MATCH</div>
-        <div class="best-match-card">
-          <div class="best-match-header">
-            <span class="best-match-tag">Closest Catalog Line</span>
-            <span class="best-match-pill">DIFFERENT VARIANT</span>
-          </div>
-          <div class="best-match-line">${this.escapeHtml(result.bestMatch)}</div>
-          <div class="best-match-note">${this.escapeHtml(result.note || 'A related model exists in stock, but the specific generation or suffix differs.')}</div>
+        <div class="result-badge">◐ MULTIPLE VARIANTS IN STOCK</div>
+        <div class="confirmed-model-card">
+          <div class="confirmed-model-name">${this.escapeHtml(result.matchedModel)}</div>
+          <div class="confirmed-model-note">${this.escapeHtml(result.reasoning)}</div>
         </div>
-        ${result.matches.length > 0 ? this.renderCatalogMatches(result.matches, 'Available catalog alternatives') : ''}
+        ${this.renderCatalogMatches(result.variants, 'Available variants of this model')}
       `;
-    } else if (result.category === 'UNCERTAIN') {
-      this.searchResult.className = 'result uncertain';
+    } else if (result.status === 'PARTIAL') {
+      this.searchResult.className = 'result partial';
       this.searchResult.innerHTML = `
-        <div class="result-badge">？ NEEDS CONFIRMATION</div>
-        <div class="best-match-card">
-          <div class="best-match-header">
-            <span class="best-match-tag">Series Detected</span>
-            <span class="best-match-pill">SPECIFY EXACT MODEL</span>
-          </div>
-          <div class="best-match-line">${this.escapeHtml(result.bestMatch)}</div>
-          <div class="best-match-note">${this.escapeHtml(result.note || 'Multiple models found for this series. Please enter your exact model number.')}</div>
+        <div class="result-badge">◐ DIFFERENT VARIANT IN STOCK</div>
+        <div class="confirmed-model-card">
+          <div class="confirmed-model-name">${this.escapeHtml(result.matchedModel)}</div>
+          <div class="confirmed-model-note">${this.escapeHtml(result.reasoning)}</div>
         </div>
-        ${result.matches.length > 0 ? this.renderCatalogMatches(result.matches, 'Models in this series') : ''}
+        ${this.renderCatalogMatches(result.variants, 'Available catalog alternatives')}
       `;
     } else {
       this.searchResult.className = 'result unavailable';
       this.searchResult.innerHTML = `
         <div class="result-badge">❌ NOT FOUND IN CATALOG</div>
-        <div class="match-info" style="margin-top: 12px; font-size: 0.85rem;">
-          Model "<strong>${this.escapeHtml(query.toUpperCase())}</strong>" was not found in the uploaded catalog.
+        <div class="confirmed-model-card">
+          <div class="confirmed-model-name">${this.escapeHtml(query.toUpperCase())}</div>
+          <div class="confirmed-model-note">Model was not found in the uploaded catalog.</div>
         </div>
       `;
     }
@@ -820,12 +947,13 @@ class ModelChecker {
     this.aiResult.innerHTML = '<div>Thinking...</div>';
 
     try {
+      const cleanCatalog = this.getCleanCatalog();
       const response = await fetch(`${AI_API_BASE_URL}/api/ai-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
-          availableModels: Array.from(this.models).map(model => this.displayModel(model))
+          availableModels: cleanCatalog
         })
       });
 
@@ -834,9 +962,21 @@ class ModelChecker {
         throw new Error(data.error || 'AI lookup failed');
       }
 
-      const matchedModels = Array.isArray(data.matchedModels)
+      // Deduplicate matched models
+      const rawMatches = Array.isArray(data.matchedModels)
         ? data.matchedModels
         : (data.matchedModel ? [data.matchedModel] : []);
+      const seen = new Set();
+      const uniqueMatches = [];
+      for (const m of rawMatches) {
+        const clean = String(m || '').replace(/[,;]+$/, '').trim();
+        const k = this.compact(clean);
+        if (k.length >= 2 && !seen.has(k)) {
+          seen.add(k);
+          uniqueMatches.push(clean);
+        }
+      }
+
       const statusText = {
         available: '✅ Available in Catalog',
         unavailable: '❌ Not in Catalog',
@@ -851,18 +991,32 @@ class ModelChecker {
         unavailable: 'result unavailable'
       }[data.status] || (data.available ? 'result available' : 'result unavailable');
 
-      const options = matchedModels.length
-        ? this.renderCatalogMatches(matchedModels)
+      // If exact match or single match, DO NOT render catalog matches list: "extra ar kiso na"
+      const isSingleExact = (data.status === 'available' || data.available) && uniqueMatches.length <= 1;
+      const options = (!isSingleExact && uniqueMatches.length > 1)
+        ? this.renderCatalogMatches(uniqueMatches, 'PDF catalog matches')
         : '';
+
       const serviceNotice = data.aiUnavailable
         ? '<div class="match-info">Gemini is temporarily busy. This result was checked directly against your PDF.</div>'
         : '';
+
+      const matchedName = data.matchedModel || (uniqueMatches.length === 1 ? uniqueMatches[0] : null);
+      const confirmedModelHtml = matchedName
+        ? `
+          <div class="confirmed-model-card">
+            <div class="confirmed-model-name">${this.escapeHtml(matchedName)}</div>
+            <div class="confirmed-model-note">${this.escapeHtml(data.reasoning || 'Exact model is confirmed and available in stock.')}</div>
+          </div>
+        `
+        : `<div class="match-info">${this.escapeHtml(data.reasoning || 'AI assistant response')}</div>`;
+
       this.aiResult.className = statusClass;
       this.aiResult.innerHTML = `
         <div class="result-badge">${statusText}</div>
-        <div class="match-info">${this.escapeHtml(data.reasoning || 'AI assistant response')}</div>
+        ${confirmedModelHtml}
         ${options}
-        <div class="match-info">${data.ambiguous ? 'Please enter the exact model name for a precise result.' : `Matched model: ${this.escapeHtml(data.matchedModel || 'None')}`}</div>
+        ${data.ambiguous && uniqueMatches.length > 1 ? '<div class="match-info">Please select your specific variant from the list above.</div>' : ''}
         ${data.question ? `<div class="match-info"><strong>Question:</strong> ${this.escapeHtml(data.question)}</div>` : ''}
         <div class="match-info">Confidence: ${data.confidence || 0}%</div>
         ${serviceNotice}
@@ -873,9 +1027,14 @@ class ModelChecker {
       const localMatches = this.findLocalMatches(prompt);
       if (localMatches.length) {
         this.aiResult.className = 'result available';
+        const isSingle = localMatches.length === 1;
         this.aiResult.innerHTML = `
           <div class="result-badge">✅ Available in Catalog</div>
-          ${this.renderCatalogMatches(localMatches)}
+          <div class="confirmed-model-card">
+            <div class="confirmed-model-name">${this.escapeHtml(localMatches[0])}</div>
+            <div class="confirmed-model-note">Match confirmed directly from your uploaded PDF catalog.</div>
+          </div>
+          ${!isSingle ? this.renderCatalogMatches(localMatches, 'PDF catalog matches') : ''}
           <div class="match-info">AI explanation is temporarily unavailable, but the catalog match is confirmed locally.</div>
         `;
         this.aiStatus.textContent = 'Catalog result ready';
@@ -911,9 +1070,10 @@ class ModelChecker {
     this.aiResult.innerHTML = '<div>Identifying laptop model...</div><div class="match-info">The image is sent securely to the AI backend for analysis.</div>';
 
     try {
+      const cleanCatalog = this.getCleanCatalog();
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('availableModels', JSON.stringify(Array.from(this.models).map(model => this.displayModel(model))));
+      formData.append('availableModels', JSON.stringify(cleanCatalog));
 
       const response = await fetch(`${AI_API_BASE_URL}/api/ai-image-check`, {
         method: 'POST',
@@ -922,7 +1082,18 @@ class ModelChecker {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || `AI image lookup failed (${response.status})`);
 
-      const matches = Array.isArray(data.matchedModels) ? data.matchedModels : [];
+      const rawMatches = Array.isArray(data.matchedModels) ? data.matchedModels : [];
+      const seen = new Set();
+      const uniqueMatches = [];
+      for (const m of rawMatches) {
+        const clean = String(m || '').replace(/[,;]+$/, '').trim();
+        const k = this.compact(clean);
+        if (k.length >= 2 && !seen.has(k)) {
+          seen.add(k);
+          uniqueMatches.push(clean);
+        }
+      }
+
       const imageStatusText = {
         available: '✅ Available in Catalog',
         unavailable: '❌ Not in Catalog',
@@ -937,12 +1108,26 @@ class ModelChecker {
         unavailable: 'result unavailable'
       }[data.status] || (data.available ? 'result available' : 'result unavailable');
 
+      const isSingleExact = (data.status === 'available' || data.available) && uniqueMatches.length <= 1;
+      const options = (!isSingleExact && uniqueMatches.length > 1)
+        ? this.renderCatalogMatches(uniqueMatches, 'PDF catalog matches')
+        : '';
+
+      const matchedName = data.identifiedModel || (uniqueMatches.length === 1 ? uniqueMatches[0] : null);
+      const confirmedCard = matchedName
+        ? `
+          <div class="confirmed-model-card">
+            <div class="confirmed-model-name">${this.escapeHtml(matchedName)}</div>
+            <div class="confirmed-model-note">${this.escapeHtml(data.reasoning || 'Image match confirmed in catalog.')}</div>
+          </div>
+        `
+        : `<div class="match-info">${this.escapeHtml(data.reasoning || 'The assistant could not identify a confident model.')}</div>`;
+
       this.aiResult.className = imageStatusClass;
       this.aiResult.innerHTML = `
         <div class="result-badge">${imageStatusText}</div>
-        <div class="match-info"><strong>AI identified:</strong> ${this.escapeHtml(data.identifiedModel || 'Model not clear')}</div>
-        ${matches.length ? this.renderCatalogMatches(matches, 'PDF catalog matches') : ''}
-        <div class="match-info">${this.escapeHtml(data.reasoning || 'The assistant could not identify a confident model.')}</div>
+        ${confirmedCard}
+        ${options}
         ${data.question ? `<div class="match-info"><strong>Question:</strong> ${this.escapeHtml(data.question)}</div>` : ''}
         <div class="match-info">Confidence: ${data.confidence || 0}%</div>
       `;
