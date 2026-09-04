@@ -1,6 +1,6 @@
 import os
 import re
-from typing import List, Optional
+from typing import List
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -32,35 +32,47 @@ def normalize_model(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", " ", str(text or "")).upper().strip()
 
 
-def best_model_match(query: str, available_models: List[str]) -> Optional[str]:
-    if not available_models:
-        return None
+def compact_model(text: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", normalize_model(text))
 
-    query_norm = normalize_model(query)
-    best_match = None
-    best_score = 0
 
+def query_fragments(query: str) -> List[str]:
+    normalized = normalize_model(query)
+    tokens = normalized.split()
+    fragments = []
+    for index, token in enumerate(tokens):
+        compact_token = compact_model(token)
+        has_letters = bool(re.search(r"[A-Z]", compact_token))
+        has_digits = bool(re.search(r"\d", compact_token))
+        if has_letters and has_digits:
+            fragments.append(compact_token)
+        elif compact_token.isdigit() and len(compact_token) >= 3:
+            fragments.append(compact_token)
+
+        if index + 1 < len(tokens):
+            next_token = compact_model(tokens[index + 1])
+            if next_token and ((compact_token.isdigit() and len(next_token) <= 4 and re.search(r"[A-Z]", next_token))
+                               or (has_letters and has_digits and next_token.isdigit())):
+                fragments.append(compact_token + next_token)
+
+    if fragments:
+        return list(dict.fromkeys(fragments))
+    return [compact_model(normalized)] if compact_model(normalized) else []
+
+
+def find_model_matches(query: str, available_models: List[str]) -> List[str]:
+    fragments = query_fragments(query)
+    if not fragments:
+        return []
+    fragments = [max(fragments, key=len)]
+
+    matches = []
     for model in available_models:
-        model_norm = normalize_model(model)
-        if not model_norm:
-            continue
-
-        if query_norm == model_norm:
-            return model
-
-        if query_norm in model_norm or model_norm in query_norm:
-            score = 95
-        else:
-            q_tokens = set(query_norm.split())
-            m_tokens = set(model_norm.split())
-            common = q_tokens & m_tokens
-            score = len(common) * 25
-
-        if score > best_score:
-            best_score = score
-            best_match = model
-
-    return best_match if best_score >= 25 else None
+        model_compact = compact_model(model)
+        if any(fragment and (fragment == model_compact or fragment in model_compact or model_compact in fragment)
+               for fragment in fragments):
+            matches.append(model)
+    return list(dict.fromkeys(matches))
 
 
 @app.route("/api/ai-check", methods=["POST"])
@@ -78,10 +90,13 @@ def ai_check():
     if not prompt:
         return jsonify({"error": "Prompt is required."}), 400
 
+    matches = find_model_matches(prompt, available_models)
     model_list = ", ".join(available_models) if available_models else "No models provided."
+    matched_list = ", ".join(matches) if matches else "No deterministic matches."
     user_input = (
         f"User question: {prompt}\n"
         f"Available models from PDF: {model_list}\n"
+        f"Deterministic matches for the model fragment: {matched_list}\n"
         "Determine if the requested model is available."
     )
 
@@ -102,15 +117,20 @@ def ai_check():
     except Exception as exc:  # pragma: no cover
         return jsonify({"error": f"AI request failed: {exc}"}), 500
 
-    normalized_answer = answer.lower()
-    is_available = "available" in normalized_answer and "not available" not in normalized_answer
-    matched_model = best_model_match(prompt, available_models)
+    is_available = bool(matches)
+    matched_model = matches[0] if matches else None
+    if matches:
+        reasoning = f"Found {len(matches)} matching model option(s) in the PDF."
+    else:
+        reasoning = answer or "No matching model was found in the PDF."
 
     return jsonify({
         "available": is_available,
         "matchedModel": matched_model,
-        "reasoning": answer,
-        "confidence": 92 if matched_model else 72,
+        "matchedModels": matches,
+        "ambiguous": len(matches) > 1,
+        "reasoning": reasoning,
+        "confidence": 98 if matches else 72,
     })
 
 

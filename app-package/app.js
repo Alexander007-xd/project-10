@@ -264,13 +264,20 @@ class ModelChecker {
         throw new Error(data.error || 'AI lookup failed');
       }
 
+      const matchedModels = Array.isArray(data.matchedModels)
+        ? data.matchedModels
+        : (data.matchedModel ? [data.matchedModel] : []);
       const statusText = data.available ? '✅ Available' : '❌ Not Found';
       const statusClass = data.available ? 'result available' : 'result not-found';
+      const options = matchedModels.length
+        ? `<div class="match-info"><strong>Available options:</strong><br>${matchedModels.map(model => this.escapeHtml(model)).join('<br>')}</div>`
+        : '';
       this.aiResult.className = statusClass;
       this.aiResult.innerHTML = `
         <div>${statusText}</div>
-        <div class="match-info">${data.reasoning || 'AI assistant response'}</div>
-        <div class="match-info">Matched model: ${data.matchedModel || 'None'}</div>
+        <div class="match-info">${this.escapeHtml(data.reasoning || 'AI assistant response')}</div>
+        ${options}
+        <div class="match-info">${data.ambiguous ? 'Please enter the exact model name for a precise result.' : `Matched model: ${this.escapeHtml(data.matchedModel || 'None')}`}</div>
         <div class="match-info">Confidence: ${data.confidence || 0}%</div>
       `;
       this.aiStatus.textContent = 'AI response ready';
@@ -279,10 +286,20 @@ class ModelChecker {
       this.aiResult.className = 'result not-found';
       this.aiResult.innerHTML = `
         <div>❌ AI lookup failed</div>
-        <div class="match-info">${error.message}</div>
+        <div class="match-info">${this.escapeHtml(error.message)}</div>
       `;
       this.aiStatus.textContent = 'API connection issue. Check your Python backend and Google key.';
     }
+  }
+
+  escapeHtml(value) {
+    return String(value || '').replace(/[&<>'"]/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[character]));
   }
 
   async handleImageUpload() {
