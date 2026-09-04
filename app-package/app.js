@@ -272,6 +272,9 @@ class ModelChecker {
       const options = matchedModels.length
         ? `<div class="match-info"><strong>Available options:</strong><br>${matchedModels.map(model => this.escapeHtml(model)).join('<br>')}</div>`
         : '';
+      const serviceNotice = data.aiUnavailable
+        ? '<div class="match-info">Gemini is temporarily busy. This result was checked directly against your PDF.</div>'
+        : '';
       this.aiResult.className = statusClass;
       this.aiResult.innerHTML = `
         <div>${statusText}</div>
@@ -279,6 +282,7 @@ class ModelChecker {
         ${options}
         <div class="match-info">${data.ambiguous ? 'Please enter the exact model name for a precise result.' : `Matched model: ${this.escapeHtml(data.matchedModel || 'None')}`}</div>
         <div class="match-info">Confidence: ${data.confidence || 0}%</div>
+        ${serviceNotice}
       `;
       this.aiStatus.textContent = 'AI response ready';
     } catch (error) {

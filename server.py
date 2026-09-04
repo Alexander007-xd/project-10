@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from typing import List
 
 from flask import Flask, jsonify, request
@@ -100,22 +101,30 @@ def ai_check():
         "Determine if the requested model is available."
     )
 
-    try:
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=user_input,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=TEMPERATURE,
-                max_output_tokens=MAX_OUTPUT_TOKENS,
-                top_p=0.9,
-                candidate_count=1,
-            ),
-        )
-        answer = (response.text or "").strip()
-    except Exception as exc:  # pragma: no cover
-        return jsonify({"error": f"AI request failed: {exc}"}), 500
+    answer = ""
+    ai_error = None
+    client = genai.Client(api_key=api_key)
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=user_input,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    temperature=TEMPERATURE,
+                    max_output_tokens=MAX_OUTPUT_TOKENS,
+                    top_p=0.9,
+                    candidate_count=1,
+                ),
+            )
+            answer = (response.text or "").strip()
+            break
+        except Exception as exc:  # pragma: no cover
+            ai_error = str(exc)
+            if "503" not in ai_error and "UNAVAILABLE" not in ai_error:
+                break
+            if attempt < 2:
+                time.sleep(1 + attempt)
 
     is_available = bool(matches)
     matched_model = matches[0] if matches else None
@@ -123,6 +132,8 @@ def ai_check():
         reasoning = f"Found {len(matches)} matching model option(s) in the PDF."
     else:
         reasoning = answer or "No matching model was found in the PDF."
+    if ai_error and not answer:
+        reasoning += " AI explanation is temporarily unavailable, so this result uses the PDF catalog match."
 
     return jsonify({
         "available": is_available,
@@ -131,6 +142,7 @@ def ai_check():
         "ambiguous": len(matches) > 1,
         "reasoning": reasoning,
         "confidence": 98 if matches else 72,
+        "aiUnavailable": bool(ai_error and not answer),
     })
 
 
