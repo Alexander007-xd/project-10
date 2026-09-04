@@ -179,16 +179,118 @@ def compact(text: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", normalize(text))
 
 
+def split_multi_brand_line(line: str) -> list:
+    brand_pattern = re.compile(r"\b(Acer|Asus|Dell|Apple|MacBook|Microsoft|Surface|HP|Lenovo|MSI|Razer|Canon|Alienware|Samsung|Sony|Toshiba|LG)\b", re.I)
+    matches = [{"index": m.start(), "brand": m.group(1)} for m in brand_pattern.finditer(line)]
+    if len(matches) <= 1:
+        return [line.strip()]
+
+    split_indices = []
+    for i, curr in enumerate(matches):
+        if i > 0:
+            prev = matches[i - 1]
+            if (re.search(r"Apple", prev["brand"], re.I) and re.search(r"MacBook", curr["brand"], re.I)) or \
+               (re.search(r"Microsoft", prev["brand"], re.I) and re.search(r"Surface", curr["brand"], re.I)):
+                continue
+        split_indices.append(curr["index"])
+
+    chunks = []
+    for i, start in enumerate(split_indices):
+        end = split_indices[i + 1] if i + 1 < len(split_indices) else len(line)
+        chunk = line[start:end].strip()
+        if len(chunk) > 2:
+            chunks.append(chunk)
+    return chunks
+
+
+def expand_sub_models(entry: str) -> list:
+    clean = re.sub(r"[,;]+$", "", str(entry or "").strip()).strip()
+    text_without_paren = re.sub(r"\([^)]*\)", lambda m: m.group(0).replace(",", "__COMMA__"), clean)
+
+    # Pattern 1: Comma-separated numbers at end after prefix
+    m1 = re.match(r"^(.+?\b(?:Latitude|Inspiron|Vostro|XPS|IdeaPad|ThinkPad|ProBook|EliteBook|Modern|Prestige|ExpertBook|ZenBook|VivoBook|Legion|LOQ)?(?:\s+\d{1,2})?)\s+([A-Z0-9-]{3,10}(?:\s*,\s*[A-Z0-9-]{2,10})+)$", clean, re.I)
+    if m1:
+        prefix = m1.group(1).strip()
+        codes = [c.strip() for c in m1.group(2).split(",")]
+        if all(re.match(r"^[A-Z0-9-]{2,10}$", c, re.I) and not re.match(r"^(AND|OR|THE|INCH|SERIES)$", c, re.I) for c in codes):
+            results = []
+            for code in codes:
+                if len(code) <= 2 and re.match(r"^[A-Z]{1,3}\d{3}-\d{2}$", codes[0], re.I):
+                    base = codes[0].split("-")[0]
+                    results.append(f"{prefix} {base}-{code}".strip())
+                else:
+                    results.append(f"{prefix} {code}".strip())
+            return results
+
+    # Pattern 2: Comma-separated full models with repeated prefix
+    if "," in text_without_paren:
+        parts = [p.replace("__COMMA__", ",").strip() for p in text_without_paren.split(",")]
+        if len(parts) > 1:
+            first_part = parts[0]
+            prefix_words = first_part.split()
+            if len(prefix_words) >= 2:
+                sub_models = []
+                all_matched = True
+                for p in parts:
+                    p = p.strip()
+                    if p.lower().startswith(prefix_words[0].lower()):
+                        sub_models.append(p)
+                    elif re.match(r"^\d{3,4}\s*G\d", p, re.I) and len(prefix_words) >= 3:
+                        sub_models.append(f"{prefix_words[0]} {prefix_words[1]} {p}".strip())
+                    elif re.match(r"^G\d", p, re.I):
+                        base_p = re.sub(r"G\d.*$", "", first_part)
+                        sub_models.append(f"{base_p}{p}".strip())
+                    else:
+                        sub_models.append(f"{prefix_words[0]} {p}".strip())
+                if all_matched and len(sub_models) > 1:
+                    return sub_models
+
+    # Pattern 3: Hyphenated pair
+    m3 = re.match(r"^(.+?)\s+(\d{2}[A-Z0-9]{3,7})\s*-\s*(\d{2}[A-Z0-9]{3,7})$", clean, re.I)
+    if m3:
+        prefix = m3.group(1).strip()
+        return [f"{prefix} {m3.group(2)}".strip(), f"{prefix} {m3.group(3)}".strip()]
+
+    # Pattern 4: MacBook Air (13.3-inch, A1466, A1369)
+    m4 = re.match(r"^(MacBook\s*(?:Air|Pro))\s*\((?:[^)]*,\s*)?(A\d{4})\s*,\s*(A\d{4})\)", clean, re.I)
+    if m4:
+        return [f"{m4.group(1)} {m4.group(2)}", f"{m4.group(1)} {m4.group(3)}"]
+
+    return [clean]
+
+
 def clean_catalog_lines(raw_catalog: List[str]) -> List[str]:
     seen = set()
     cleaned = []
     for item in (raw_catalog or []):
-        clean = re.sub(r"\s+", " ", str(item or "").strip())
-        clean = re.sub(r"[,;]+$", "", clean).strip()
-        k = compact(clean)
-        if len(k) >= 2 and k not in seen:
-            seen.add(k)
-            cleaned.append(clean)
+        trimmed = re.sub(r"\s+", " ", str(item or "").strip())
+        if not trimmed or re.match(r"^(Acer\s+Asus\s+Dell|Brand|Model|Laptop|Catalog)", trimmed, re.I):
+            continue
+
+        brand_chunks = split_multi_brand_line(trimmed)
+        for chunk in brand_chunks:
+            semi_parts = chunk.split(";")
+            parent_brand = ""
+            for b in BRANDS:
+                if re.search(rf"\b{b}\b", semi_parts[0], re.I):
+                    parent_brand = b.capitalize()
+                    break
+
+            for part in semi_parts:
+                clean_part = re.sub(r"[,;]+$", "", part.strip()).strip()
+                if not clean_part or len(clean_part) < 3:
+                    continue
+
+                has_brand = any(re.search(rf"\b{b}\b", clean_part, re.I) for b in BRANDS)
+                if not has_brand and parent_brand:
+                    clean_part = f"{parent_brand} {clean_part}"
+
+                sub_models = expand_sub_models(clean_part)
+                for sub in sub_models:
+                    k = compact(sub)
+                    if len(k) >= 2 and k not in seen:
+                        seen.add(k)
+                        cleaned.append(sub)
     return cleaned
 
 
@@ -476,12 +578,21 @@ def classify_match(query: str, raw_catalog: List[str]) -> dict:
                 same_model_variants.append(line)
 
     if same_model_variants:
+        if len(same_model_variants) == 1:
+            return {
+                "status": "available",
+                "is_exact_match": True,
+                "best_match": same_model_variants[0],
+                "matched_models": [],
+                "reasoning": f"Model '{query.strip()}' is available in stock.",
+                "confidence": 95,
+            }
         return {
-            "status": "available" if len(same_model_variants) == 1 else "partial",
+            "status": "partial",
             "is_exact_match": False,
-            "best_match": same_model_variants[0],
+            "best_match": f"{query.strip()} Variants",
             "matched_models": same_model_variants,
-            "reasoning": f"Variants found for '{query.strip()}':",
+            "reasoning": f"Multiple variants found for '{query.strip()}'. Available options:",
             "confidence": 90,
         }
 
