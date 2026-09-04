@@ -38,28 +38,18 @@ class ModelChecker {
     this.aiPromptInput = document.getElementById('aiPromptInput');
     this.aiImageInput = document.getElementById('aiImageInput');
     this.aiImageFileName = document.getElementById('aiImageFileName');
-    this.aiSearchBtn = document.getElementById('aiSearchBtn');
+    this.aiTextBtn = document.getElementById('aiTextBtn');
+    this.aiImageBtn = document.getElementById('aiImageBtn');
     this.aiStatus = document.getElementById('aiStatus');
     this.aiResult = document.getElementById('aiResult');
 
     this.pdfInput.addEventListener('change', () => this.handlePDFUpload());
     this.searchBtn.addEventListener('click', () => this.handleSearch());
-    this.aiImageInput.addEventListener('change', async () => {
+    this.aiImageInput.addEventListener('change', () => {
       const file = this.aiImageInput.files[0];
       this.aiImageFileName.textContent = file ? file.name : 'No image selected';
-      if (!file) {
-        this.aiSearchBtn.disabled = true;
-        this.aiStatus.textContent = 'Ready';
-        return;
-      }
-
-      this.aiPromptInput.value = '';
-      this.aiSearchBtn.disabled = !this.pdfLoaded;
-      this.aiStatus.textContent = this.pdfLoaded
-        ? 'Image ready. Starting AI scan...'
-        : 'Upload your PDF catalog first.';
-
-      if (this.pdfLoaded) await this.handleAiImageSearch(file);
+      this.updateAiButtons();
+      this.aiStatus.textContent = file ? 'Image ready to scan.' : 'Ready';
     });
     this.searchInput.addEventListener('input', () => {
       this.searchBtn.disabled = !this.pdfLoaded || !this.searchInput.value.trim();
@@ -67,14 +57,26 @@ class ModelChecker {
     this.searchInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') this.handleSearch();
     });
+    this.aiPromptInput.addEventListener('input', () => this.updateAiButtons());
 
     this.manualTabBtn.addEventListener('click', () => this.showTab('manual'));
     this.aiTabBtn.addEventListener('click', () => this.showTab('ai'));
-    this.aiSearchBtn.addEventListener('click', () => this.handleAiSearch());
+    this.aiTextBtn.addEventListener('click', () => this.handleAiSearch());
+    this.aiImageBtn.addEventListener('click', () => {
+      const file = this.aiImageInput.files[0];
+      if (file) this.handleAiImageSearch(file);
+    });
     this.aiPromptInput.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') this.handleAiSearch();
     });
-    this.aiSearchBtn.disabled = true;
+    this.updateAiButtons();
+  }
+
+  updateAiButtons() {
+    const hasPrompt = Boolean(this.aiPromptInput.value.trim());
+    const hasImage = Boolean(this.aiImageInput.files[0]);
+    this.aiTextBtn.disabled = !this.pdfLoaded || !hasPrompt;
+    this.aiImageBtn.disabled = !this.pdfLoaded || !hasImage;
   }
 
   showTab(tab) {
@@ -257,7 +259,7 @@ class ModelChecker {
       this.pdfStatus.textContent = `✅ Loaded ${this.models.size} models`;
       this.pdfStatus.style.color = '#2dd4bf';
       this.searchBtn.disabled = false;
-      this.aiSearchBtn.disabled = false;
+      this.updateAiButtons();
       this.aiStatus.textContent = 'Catalog ready';
       this.searchInput.focus();
     } catch (error) {
@@ -300,11 +302,6 @@ class ModelChecker {
   }
 
   async handleAiSearch() {
-    if (this.aiImageInput.files[0]) {
-      await this.handleAiImageSearch(this.aiImageInput.files[0]);
-      return;
-    }
-
     const prompt = this.aiPromptInput.value.trim();
     if (!this.pdfLoaded) {
       this.aiStatus.textContent = 'Upload your PDF catalog first.';
