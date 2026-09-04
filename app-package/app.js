@@ -99,11 +99,17 @@ class ModelChecker {
   }
 
   extractModelCode(value) {
-    const compact = this.normalizeModel(value);
-    const numericCode = compact.match(/\d{3,6}[A-Z]\d{1,3}[A-Z]?|\d{3,6}[A-Z]{1,3}/g);
-    if (numericCode) return numericCode.sort((left, right) => right.length - left.length)[0];
-    const letterCode = compact.match(/[A-Z]{1,6}\d{2,6}[A-Z]{0,3}/g);
-    return letterCode ? letterCode.sort((left, right) => right.length - left.length)[0] : '';
+    const tokens = String(value || '').toUpperCase().match(/[A-Z0-9]+/g) || [];
+    const codePattern = /^\d{2,6}[A-Z]{1,4}\d{1,4}[A-Z]?$|^\d{3,6}[A-Z]\d{1,3}[A-Z]?$|^\d{3,6}[A-Z]{1,3}$/;
+    const letterPattern = /^[A-Z]{1,6}\d{2,6}[A-Z]{0,3}$/;
+    const candidates = tokens.filter(token => codePattern.test(token) || letterPattern.test(token));
+    if (candidates.length) return candidates.sort((left, right) => right.length - left.length)[0];
+
+    for (let index = 0; index < tokens.length - 1; index += 1) {
+      const combined = `${tokens[index]}${tokens[index + 1]}`;
+      if (/^\d{3,6}[A-Z]\d{1,3}[A-Z]?$/.test(combined)) return combined;
+    }
+    return '';
   }
 
   isModelMatch(query, model) {
@@ -145,7 +151,7 @@ class ModelChecker {
     const hasDigits = /\d/.test(model);
     if (!hasLetters || !hasDigits) return false;
 
-    return /^(?:[A-Z]{1,4}\d{2,5}[A-Z]{0,2}|\d{3,5}[A-Z]{1,3}|\d{3,5}[A-Z]\d{1,3}[A-Z]{0,2}|[A-Z]{2,4}\d{2,5}[A-Z]{0,2}|[A-Z]\d{1,3}[A-Z]{1,2}\d{1,4})$/i.test(model)
+    return /^(?:[A-Z]{1,4}\d{2,5}[A-Z]{0,2}|\d{2,6}[A-Z]{1,4}\d{1,4}[A-Z]?|\d{3,5}[A-Z]{1,3}|\d{3,5}[A-Z]\d{1,3}[A-Z]{0,2}|[A-Z]{2,4}\d{2,5}[A-Z]{0,2}|[A-Z]\d{1,3}[A-Z]{1,2}\d{1,4})$/i.test(model)
       || /[A-Z]{2,4}-?\d{2,5}/.test(model)
       || /[A-Z]{2,4}\d{2,5}[A-Z]{1,4}/.test(model);
   }
@@ -160,6 +166,7 @@ class ModelChecker {
       /[A-Z]{1,4}-?\d{2,5}[A-Z]{0,2}/g,
       /[A-Z]{2,4}-?\d{2,5}[A-Z]{0,2}/g,
       /\d{3,5}[A-Z]{1,3}/g,
+      /\d{2,6}[A-Z]{1,4}\d{1,4}[A-Z]?/g,
       /\d{3,5}\s*[A-Z]\s*\d{1,3}[A-Z]?/g,
       /[A-Z]\d{1,3}[A-Z]{1,2}\d{1,4}/g
     ];
@@ -167,7 +174,7 @@ class ModelChecker {
     textVariants.forEach((value) => {
       const lines = value.split(/\n|\r/);
       lines.forEach((line) => {
-        const candidates = line.match(/[A-Z]{1,4}-\d{2,5}[A-Z]{0,2}|[A-Z]{1,4}-?\d{2,5}[A-Z]{0,2}|\d{3,5}[A-Z]{1,3}|\d{3,5}\s*[A-Z]\s*\d{1,3}[A-Z]?|[A-Z]{2,4}-?\d{2,5}[A-Z]{0,2}|[A-Z]\d{1,3}[A-Z]{1,2}\d{1,4}/g) || [];
+        const candidates = line.match(/[A-Z]{1,4}-\d{2,5}[A-Z]{0,2}|[A-Z]{1,4}-?\d{2,5}[A-Z]{0,2}|\d{2,6}[A-Z]{1,4}\d{1,4}[A-Z]?|\d{3,5}[A-Z]{1,3}|\d{3,5}\s*[A-Z]\s*\d{1,3}[A-Z]?|[A-Z]{2,4}-?\d{2,5}[A-Z]{0,2}|[A-Z]\d{1,3}[A-Z]{1,2}\d{1,4}/g) || [];
 
         candidates.forEach((item) => {
           const model = this.normalizeModel(item);
